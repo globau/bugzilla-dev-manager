@@ -1,0 +1,1111 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+#
+
+use lib '/opt/bugzilla/repo/git/bugzilla-dev-manager';
+
+#
+
+use BugzillaDev;
+use BugzillaDevConfig;
+use CGI;
+use Cwd 'abs_path';
+use File::Basename;
+use File::Copy;
+use File::Copy::Recursive qw(dircopy);
+use File::Find;
+use FileHandle;
+use File::Path qw(remove_tree);
+use File::Slurp;
+use Pod::Text::Ansi;
+use Storable qw(dclone);
+use Test::Harness qw(&runtests);
+
+my $action = lc(shift @ARGV || '');
+
+if ($action eq 'new') {
+    my $subdir = validateSubdir(shift @ARGV);
+
+    if (!scalar @ARGV) {
+        unshift @ARGV, determineDefaultRepo($subdir);
+    }
+    my $repo = validateRepo(shift @ARGV);
+
+    if (!scalar @ARGV) {
+        unshift @ARGV, determineDefaultDatabase($subdir);
+    }
+    my $database = validateDatabase(shift @ARGV);
+
+    if (!databaseExists($database, %LOCALCONFIG)) {
+        exit unless confirm("the database '$database' does not exist, continue?");
+    }
+    info("creating $subdir");
+    info("using repo $repo");
+    info("using database $database");
+    updateRepo($repo);
+    createSubDir($subdir, $repo);
+    updateLocalConfig($subdir, $database);
+    applyLocalPatches($subdir);
+    fixParams($subdir);
+    fixHtAccess($subdir);
+    pushd("$HTDOCS_PATH/$subdir");
+    system "./checksetup.pl -t";
+    system "./checksetup.pl";
+    popd();
+    fix($subdir);
+    info("$subdir created\n" . getDirSummary($subdir, 1));
+
+} elsif ($action eq 'patch') {
+    my $subdir = getCurrentSubdir();
+    my $patch = validatePatch($subdir, shift @ARGV);
+    info("patching $subdir with #$patch");
+    deployPatch($subdir, $patch);
+
+} elsif ($action eq 'newpatch') {
+    my $subdir = getCurrentSubdir();
+    info("about to revert all current changes and apply a new patch");
+    my $patch = validatePatch($subdir, shift @ARGV);
+    info("patching $subdir with #$patch");
+
+    system "$0 unfix";
+    system "bzr revert";
+    system "$0 fix";
+    deployPatch($subdir, $patch);
+
+} elsif ($action eq 'diff') {
+    my $subdir = getCurrentSubdir();
+    my $quick = grep { $_ eq '-quick' } @ARGV;
+    @ARGV = grep { $_ ne '-quick' } @ARGV;
+    my $bug = shift || $subdir;
+    my @files = @ARGV;
+    if (!$quick) {
+        info("running tests");
+        my @missing = missingBoilerplate($subdir);
+        if (scalar @missing) {
+            foreach my $file (@missing) {
+                print "$file does not contain a boilerplate\n";
+            }
+            exit unless confirm("continue?");
+        }
+        checkForTabs($subdir);
+        runTests($subdir, 2, 4, 5, 8, 9, 10);
+    }
+    info("making patch");
+    diff($subdir, $bug, @files);
+
+} elsif ($action eq 'db') {
+    my $subdir = getCurrentSubdir();
+    if (scalar @ARGV) {
+        my $database = validateDatabase(shift @ARGV);
+        if ($database eq getCurrentDatabase($subdir)) {
+            info("the current database is already $database");
+            exit;
+        }
+        updateLocalConfig($subdir, $database);
+        getDbh($subdir);
+        fixParams($subdir);
+    } else {
+        info(sprintf("current database for %s is %s", $subdir, getCurrentDatabase($subdir)));
+    }
+
+} elsif ($action eq 'fix') {
+    my $subdir = getCurrentSubdir();
+    info("fixing $subdir");
+    fix($subdir);
+
+} elsif ($action eq 'fix-all') {
+    my $clean_params = dclone(\%PARAMS);
+    foreach my $subdir (grep { -e "$_/localconfig" } glob("$HTDOCS_PATH/*")) {
+        %PARAMS = %$clean_params;
+        $subdir = basename($subdir);
+        info("fixing $subdir");
+        fix($subdir);
+    }
+
+} elsif ($action eq 'unfix') {
+    my $subdir = getCurrentSubdir();
+    info("unfix $subdir");
+    unfix($subdir);
+
+} elsif ($action eq 'reset-schema') {
+    my $subdir = getCurrentSubdir();
+    info("resetting schema for " . getCurrentDatabase($subdir));
+    resetSchema($subdir);
+
+} elsif ($action eq 'boilerplate' or $action eq 'bp') {
+    my $subdir = getCurrentSubdir();
+    addBoilerPlates($subdir);
+
+} elsif ($action eq 'test') {
+    my $subdir = getCurrentSubdir();
+    info("running tests");
+    runTests($subdir, @ARGV);
+
+} elsif ($action eq 'xt') {
+    my $subdir = getCurrentSubdir();
+    info("running xt tests");
+    runXtTests($subdir, @ARGV);
+
+} elsif ($action eq 'checksetup' or $action eq 'cs') {
+    my $subdir = getCurrentSubdir();
+    info("running checksetup");
+    runChecksetup($subdir, @ARGV);
+
+} elsif ($action eq 'grep') {
+    my $query = "@ARGV";
+    die("missing query string\n") if $query eq '';
+    info("searching summaries for '$query'");
+    grepSummaries($query);
+
+} elsif ($action eq 'list') {
+    my $subdir;
+    eval { $subdir = getCurrentSubdir() };
+    grepSummaries('', $subdir);
+
+} elsif ($action eq 'info') {
+    my $subdir = getCurrentSubdir();
+    showInfo($subdir);
+
+} elsif ($action =~ /^yui-(.+)/) {
+    my $edition = $1;
+    my $subdir = getCurrentSubdir();
+    info("switching to yui-$edition");
+    yui($subdir, $edition);
+
+} else {
+    usage($action ? "unknown action '$action'" : '');
+}
+
+sub usage {
+    my ($error) = @_;
+
+    alert("\n$error\n") if $error;
+
+    my $parser = Pod::Text::Ansi->new(sentence => 0, width => 78);
+    $parser->output_fh(*STDOUT);
+    $parser->parse_lines(<DATA>);
+
+    exit;
+}
+
+#
+
+sub validateSubdir {
+    my ($subdir) = @_;
+    $subdir = lc($subdir || '');
+    $subdir =~ s#^htdocs[\\|/]##;
+    $subdir =~ s#[\\|/]$##;
+    die("invalid directory '$subdir'\n") if $subdir eq '' || $subdir eq '.';
+    return $subdir;
+}
+
+sub getCurrentSubdir {
+    my $subdir = abs_path('.') . '/';
+    die("invalid working directory: $subdir\n") unless $subdir =~ m#/htdocs/([^/]+)/#;
+    $subdir = $1;
+    return $subdir;
+}
+
+sub determineDefaultRepo {
+    my ($subdir) = @_;
+
+    my $default;
+    if (dirToBugID($subdir)) {
+        my $bug = getBugInfo(dirToBugID($subdir));
+        if ($bug->{product} eq 'Bugzilla') {
+            $default = $bug->{milestone};
+            $default =~ s/^bugzilla //i;
+            if ($default eq '---' || $default eq $BUGZILLA_TRUNK_MILESTONE) {
+                $default = 'bugzilla/trunk';
+            } else {
+                $default = "bugzilla/$default";
+            }
+        } elsif ($bug->{product} eq 'bugzilla.mozilla.org') {
+            $default = $DEFAULT_BMO_REPO;
+        } else {
+            info("unable to map " . $bug->{product} . " to a repo");
+            $default = $DEFAULT_BMO_REPO;
+        }
+
+    } else {
+        $default = $DEFAULT_BMO_REPO;
+    }
+
+    exit unless confirm("use default repository '$default'?");
+    return $default;
+}
+
+sub determineDefaultDatabase {
+    my ($subdir) = @_;
+
+    my $default;
+    if (dirToBugID($subdir)) {
+        my $bug = getBugInfo(dirToBugID($subdir));
+        if ($bug->{product} eq 'Bugzilla') {
+            $default = $bug->{milestone};
+            $default =~ s/^bugzilla //i;
+            $default = 'trunk' if $default eq '---' || $default eq $BUGZILLA_TRUNK_MILESTONE;
+        } elsif ($bug->{product} eq 'bugzilla.mozilla.org') {
+            $default = $DEFAULT_BMO_DB;
+        } else {
+            info("unable to map " . $bug->{product} . " to a database");
+            $default = $DEFAULT_BMO_DB;
+        }
+
+    } else {
+        $default = $DEFAULT_BMO_DB;
+    }
+
+    $default = validateDatabase($default);
+    exit unless confirm("use default database '$default'?");
+    return $default;
+}
+
+sub validateRepo {
+    my ($repo) = @_;
+    $repo = lc($repo || '');
+    $repo =~ s#^repo[\\|/]##;
+    die("missing repo\n") if $repo eq '';
+    my $found = 0;
+    foreach my $try ("$repo", "bugzilla/$repo", "bmo/$repo") {
+        if (-d "$REPO_PATH/$try") {
+            $repo = $try;
+            $found = 1;
+            last;
+        }
+    }
+    die "failed to find repo/$repo\n" unless $found;
+    return $repo;
+}
+
+sub validateDatabase {
+    my ($db) = @_;
+    die "missing database\n" unless $db;
+    $db = lc $db;
+    $db =~ s/[\.-\/]/_/g;
+    $db = "bugs_$db" unless $db =~ /^bugs_/;
+    return $db;
+}
+
+sub validatePatch {
+    my ($subdir, $patch) = @_;
+
+    if (!$patch && $subdir !~ /\D/) {
+        info("fetching patches from bug $subdir");
+        my $proxy = getBmoProxy();
+        my $response = $proxy->call('Bug.attachments', { ids => [ $subdir ], exclude_fields => [ 'data' ] });
+        soapErrChk($response);
+        my @patches;
+        foreach my $rh (@{$response->result->{bugs}->{$subdir}}) {
+            next unless $rh->{is_patch};
+            next if $rh->{is_obsolete};
+            push @patches, $rh;
+        }
+        if (scalar @patches < 10) {
+            my $prompt = "  0. cancel\n";
+            my $re = '0';
+            for(my $i = 1; $i <= scalar @patches; $i++) {
+                $prompt .= sprintf " %2s. %s\n", $i, $patches[$i - 1]->{summary};
+                $re .= "$i";
+            }
+            $prompt .= '? ';
+            my $no = prompt($prompt, qr/[$re]/i);
+            exit if $no == 0;
+            $patch = $patches[$no - 1]->{id};
+        }
+    }
+
+    die("patch number or url missing\n") if !defined($patch) or $patch eq '';
+    if ($patch =~ /id=(\d+)/) {
+        $patch = $1;
+    }
+    die("invalid patch number\n") if $patch =~ /\D/;
+    return $patch;
+}
+
+sub updateRepo {
+    my ($repo) = @_;
+    pushd("$REPO_PATH/$repo");
+    info("updating repo $repo");
+    system('bzr up');
+    popd();
+}
+
+sub createSubDir {
+    my ($subdir, $repo) = @_;
+    return if -e "$HTDOCS_PATH/$subdir";
+    die "invalid repo\n" unless -d "$REPO_PATH/$repo";
+    info("creating $subdir directory");
+    dircopy("$REPO_PATH/$repo", "$HTDOCS_PATH/$subdir") or die $!;
+    foreach my $file (glob("$HTDOCS_PATH/$subdir/*.patch")) {
+        unlink $file;
+    }
+}
+
+sub getCurrentDatabase {
+    my ($subdir) = @_;
+    createDefaultConfig($subdir);
+    open(FH, "$HTDOCS_PATH/$subdir/localconfig") or die $!;
+    my @file = <FH>;
+    close FH;
+    foreach my $line (@file) {
+        next unless $line =~ /^\$db_name\s*=\s*'([^']+)'/;
+        return $1;
+    }
+    return "unknown";
+}
+
+sub updateLocalConfig {
+    my ($subdir, $database) = @_;
+    $database ||= getCurrentDatabase($subdir);
+    createDefaultConfig($subdir);
+    open(FH, "$HTDOCS_PATH/$subdir/localconfig") or die $!;
+    my @file = <FH>;
+    close FH;
+    $LOCALCONFIG{'db_name'} = $database;
+    foreach my $line (@file) {
+        next unless $line =~ /^\s*\$([\w_]+)\s*=\s*'([^']*)'/;
+        my ($name, $value) = ($1, $2);
+        if (exists $LOCALCONFIG{$name} && $LOCALCONFIG{$name} ne $value) {
+            info("setting $name to $LOCALCONFIG{$name}");
+            $line = "\$$name = '$LOCALCONFIG{$name}';\n";
+        }
+    }
+    open(FH, ">$HTDOCS_PATH/$subdir/localconfig") or die $!;
+    print FH @file;
+    close FH;
+}
+
+sub createDefaultConfig {
+    my ($subdir) = @_;
+    return if -e "$HTDOCS_PATH/$subdir/localconfig";
+    info("creating $HTDOCS_PATH/$subdir/localconfig");
+    open(FH, ">$HTDOCS_PATH/$subdir/localconfig") or die $!;
+    print FH <<'EOF';
+$create_htaccess = 1;
+$webservergroup = '';
+$use_suexec = 0;
+$db_driver = 'mysql';
+$db_host = '';
+$db_name = 'bugs';
+$db_user = 'bugs';
+$db_pass = '';
+$db_port = 0;
+$db_sock = '';
+$db_check = 1;
+$index_html = 0;
+$cvsbin = '';
+$interdiffbin = '';
+$diffpath = '';
+EOF
+    close FH;
+}
+
+sub applyLocalPatches {
+    my ($subdir) = @_;
+
+    pushd("$HTDOCS_PATH/$subdir");
+
+    foreach my $file (getLocalPatchFiles($subdir)) {
+        info("applying patch from $file");
+        system "patch --forward --strip=0 --input=$file --reject-file=- --batch";
+    }
+
+    if (!-e "extensions/LimitedEmailEx" && -e "extensions/LimitedEmail/disabled") {
+        info("deploying limited-email extension");
+        symlink("$REPO_PATH/LimitedEmailEx", "$HTDOCS_PATH/$subdir/extensions/LimitedEmailEx")
+            or die $!;
+    } elsif (-e "extensions/LimitedEmailEx" && !-e "extensions/LimitedEmail/disabled") {
+        info("deleting limited-email extension");
+        unlink("$HTDOCS_PATH/$subdir/extensions/LimitedEmailEx");
+    }
+
+    popd();
+}
+
+sub revertLocalPatches {
+    my ($subdir) = @_;
+
+    pushd("$HTDOCS_PATH/$subdir");
+    foreach my $file (getLocalPatchFiles($subdir)) {
+        system "patch --reverse --strip=0 --input=$file --reject-file=- --batch"
+    }
+
+    if (-e "extensions/LimitedEmailEx") {
+        info("deleting limited-email extension");
+        unlink("$HTDOCS_PATH/$subdir/extensions/LimitedEmailEx");
+    }
+
+    popd();
+}
+
+sub getLocalPatchFiles {
+    my ($subdir) = @_;
+    my @specs;
+    push @specs, "$DATA_PATH/patches/shared/*.patch";
+    push @specs, "$DATA_PATH/patches/" . getRepoBase($subdir) ."/*.patch";
+    my @files;
+    push @files, glob($_) foreach @specs;
+    return @files;
+}
+
+sub deployPatch {
+    my ($subdir, $patch) = @_;
+
+    info("fetching patch $patch");
+    my $proxy = getBmoProxy();
+
+    my $response = $proxy->call('Bug.attachments', { attachment_ids => [ $patch ] });
+    soapErrChk($response);
+
+    my $attachments = $response->result->{attachments};
+    die "failed to get attachment $patch information\n" unless exists $attachments->{$patch};
+    my $attachment = $attachments->{$patch};
+    printf STDERR "Bug %s: %s\n", $attachment->{bug_id}, $attachment->{description} || $attachment->{summary};
+    die "attachment is not a patch\n" unless $attachment->{is_patch} == '1';
+    die "attachment is obsolete\n" if $attachment->{is_obsolete} == '1';
+
+    my $bug_id = $attachment->{bug_id};
+    my $filename = "$bug_id-$patch.patch";
+    my $content = $attachment->{data};
+    $content =~ s/\015\012/\012/g;
+
+    if (dirToBugID($subdir) && dirToBugID($subdir) != $bug_id) {
+        exit unless confirm("the patch from a different bug ($bug_id), continue?");
+    }
+
+    pushd("$HTDOCS_PATH/$subdir");
+    info("creating $filename");
+    write_file($filename, { binmode => ':raw' }, $content);
+    system("patch -p0 < $filename");
+    popd();
+}
+
+my %_bug_cache;
+
+sub getBugInfo {
+    my ($id) = @_;
+
+    if (!exists $_bug_cache{$id}) {
+        info("looking up bug $id");
+        my $proxy = getBmoProxy();
+        my $response = $proxy->call(
+            'Bug.get',
+            {
+                ids => [ $id ],
+                include_fields => [ 'id', 'product', 'version', 'target_milestone' ],
+            }
+        );
+        soapErrChk($response);
+
+        my $rh = $response->result->{bugs}->[0];
+        $_bug_cache{$id} = {
+            product => $rh->{product},
+            version => $rh->{version},
+            milestone => $rh->{target_milestone},
+        };
+    }
+
+    return $_bug_cache{$id};
+}
+
+sub diff {
+    my ($subdir, $bug, @files) = @_;
+    die "Not a branch: $HTDOCS_PATH/$subdir\n" unless -e "$HTDOCS_PATH/$subdir/.bzr";
+    pushd("$HTDOCS_PATH/$subdir");
+
+    $bug = $1 if $bug =~ /^(\d+)_/;
+    my $revision = 0;
+    if ($bug ne '-') {
+        foreach my $file (glob("${bug}_*.patch")) {
+            next unless $file =~ /^\Q$bug\E_(\d+)\.patch$/;
+            $revision = $1 if $1 > $revision;
+        }
+        $revision++;
+    }
+
+    unfix($subdir);
+    my $patch = `bzr diff @files`;
+    if ($bug eq '-') {
+        print $patch;
+    } else {
+        print "creating ${bug}_$revision.patch\n";
+        write_file("${bug}_$revision.patch", $patch);
+    }
+    fix($subdir);
+    popd();
+}
+
+sub fixParams {
+    my ($subdir) = @_;
+    my $filename = "$HTDOCS_PATH/$subdir/data/params";
+    return unless -e $filename;
+
+    if ($subdir eq 'mod_perl') {
+        $PARAMS{urlbase} = $MODPERL_BASE;
+        $PARAMS{attachment_base} = $MODPERL_ATTACH_BASE;
+        $PARAMS{cookiepath} = "/";
+        $PARAMS{cookiedomain} = '';
+    } else {
+        $PARAMS{urlbase} = sprintf($PARAMS{urlbase}, $subdir);
+        $PARAMS{attachment_base} = sprintf($PARAMS{attachment_base}, $subdir);
+        $PARAMS{cookiepath} = "/$subdir/";
+        $PARAMS{cookiedomain} = '';
+    }
+    
+    $PARAMS{announcehtml} = getAnnounceHtml($subdir);
+
+    my @file;
+    open(FH, $filename) or die "failed to open $filename: $!\n";
+    while (<FH>) {
+        my $line = $_;
+        foreach my $name (sort keys %PARAMS) {
+            $line = fixParam($line, $name, $PARAMS{$name});
+        }
+        push @file, $line;
+    }
+    close FH;
+
+    open(FH, ">$filename") or die $!;
+    print FH @file;
+    close FH;
+}
+
+sub getAnnounceHtml {
+    my ($subdir) = @_;
+    my $id = dirToBugID($subdir);
+    my $db = getCurrentDatabase($subdir);
+    my $dev_name = $id
+        ? qq#<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=$subdir"><b>Bug $subdir</b></a>#
+        : "<b>$subdir</b>";
+    my $summary = CGI::escapeHTML(getDirSummary($subdir));
+    my $url = $URL_BASE;
+    my $mail_warning = 
+        -e "$HTDOCS_PATH/$subdir/extensions/LimitedEmailEx" || !-e "$HTDOCS_PATH/$subdir/extensions/LimitedEmail/disabled"
+        ? ''
+        : qq(<img src="${url}mail_warning.png" width="16" height="16">&nbsp;<b>Mail unrestricted</b><br>);
+    my $announcehtml = <<EOF;
+<div style="
+background: url(${url}bkg_warning.png) repeat-y scroll left top #fff9db;
+color: #666458;
+padding: 5px 5px 5px 19px;
+">
+$mail_warning
+$dev_name ($db) $summary
+</div>
+EOF
+    $announcehtml =~ s/\n//g;
+    return $announcehtml;
+}
+
+sub fixParam {
+    my ($line, $name, $value) = @_;
+    if ($line =~ /'\Q$name\E'\s*=>\s*('[^']*'|\d+),/) {
+        my ($current) = ($1);
+        $current =~ s/(^'|'$)//g;
+        if ($current ne $value) {
+            print "changing $name to '$value'\n";
+            $line =~ s/'\Q$name\E'\s*=>\s*(?:'[^']*'|\d+),/'$name' => '$value',/;
+        }
+    }
+    return $line;
+}
+
+sub fixHtAccess {
+    my ($subdir) = @_;
+    my $filename = "$HTDOCS_PATH/$subdir/.htaccess";
+    my @file = -e $filename ? read_file($filename) : ();
+    my $foundRewriteBase = 0;
+    my $foundRewriteEngine = 0;
+    foreach my $line (@file) {
+        if ($line =~ /^\s*RewriteEngine\s+On/i) {
+            $foundRewriteEngine = 1;
+        }
+        if ($line =~ /^\s*RewriteBase\s+\/([^\/]+)\//i) {
+            $foundRewriteBase = $1;
+        }
+    }
+    return if !$foundRewriteEngine || $foundRewriteBase eq $subdir;
+    info("fixing .htaccess");
+    my $i = 0;
+    foreach my $line (@file) {
+        $i++;
+        next unless $line =~ /^\s*RewriteBase\s+/i;
+        splice @file, $i - 1, 1;
+        last;
+    }
+    $i = 0;
+    foreach my $line (@file) {
+        $i++;
+        next unless $line =~ /^\s*RewriteEngine\s+On/i;
+        splice @file, $i, 0, "RewriteBase /$subdir/\n";
+        last;
+    }
+    write_file("$HTDOCS_PATH/$subdir/.htaccess", @file);
+}
+
+sub revertHtAccess {
+    my ($subdir) = @_;
+    my @file = read_file("$HTDOCS_PATH/$subdir/.htaccess");
+    my $foundRewriteBase = 0;
+    foreach my $line (@file) {
+        if ($line =~ /^\s*RewriteBase\s+/i) {
+            $foundRewriteBase = 1;
+            last;
+        }
+    }
+    return unless $foundRewriteBase;
+    info("reverting .htaccess");
+    my $i = 0;
+    foreach my $line (@file) {
+        $i++;
+        next unless $line =~ /^\s*RewriteBase\s+/i;
+        splice @file, $i - 1, 1;
+        last;
+    }
+
+    my $content = join('', @file);
+    $content =~ s/\015\012/\012/g;
+    write_file("$HTDOCS_PATH/$subdir/.htaccess", { binmode => ':raw' }, $content);
+}
+
+sub deleteCrud {
+    my ($subdir) = @_;
+    my @crud_dirs;
+    find(
+        sub {
+            my $filename = $File::Find::name;
+            return unless
+                $filename =~ /\~\d+\~$/
+                || basename($filename) =~ /^\._/
+                || $filename =~ /\.orig$/
+                || $filename =~ /\.rej$/;
+            my $name = $filename;
+            $name =~ s#^\Q$HTDOCS_PATH/$subdir/##;
+            print "deleting $name\n";
+            if (-d $filename) {
+                push @crud_dirs, $filename;
+            } else {
+                unlink($filename);
+            }
+        },
+        "$HTDOCS_PATH/$subdir"
+    );
+    foreach my $dir (@crud_dirs) {
+        rmdir($dir);
+    }
+    if (-d "$HTDOCS_PATH/$subdir/data/deleteme") {
+        print "deleting data/deleteme\n";
+        system (qq#rm -rf "$HTDOCS_PATH/$subdir/data/deleteme"#);
+        if (-d "$HTDOCS_PATH/$subdir/data/deleteme") {
+            system (qq#sudo rm -rf "$HTDOCS_PATH/$subdir/data/deleteme"#);
+        }
+    }
+}
+
+sub fix {
+    my ($subdir) = @_;
+    applyLocalPatches($subdir);
+    fixParams($subdir);
+    fixHtAccess($subdir);
+    fixPerms($subdir);
+    setRepoVersion($subdir);
+    deleteCrud($subdir);
+    updateLocalConfig($subdir);
+    if (getCurrentDatabase($subdir) eq 'bugs') {
+        alert("current database is 'bugs'");
+    }
+}
+
+sub setRepoVersion {
+    my ($subdir) = @_;
+    pushd("$HTDOCS_PATH/$subdir");
+
+    my $repo_version = '';
+    if (-d '.bzr') {
+        my $bzr = `bzr info`;
+        if ($bzr =~ m#bzr\.mozilla\.org/((bugzilla|bmo)/.+)#) {
+            $repo_version = trim($1);
+            $repo_version =~ s#/$##;
+            $repo_version =~ s#/#-#;
+        }
+    }
+    if (getDirData($subdir, 'repo-version') ne $repo_version) {
+        print "setting repo-version to $repo_version\n";
+        setDirData($subdir, 'repo-version', $repo_version);
+    }
+
+    popd();
+}
+
+sub unfix {
+    my ($subdir) = @_;
+    revertHtAccess($subdir);
+    fixAttributes($subdir);
+    revertLocalPatches($subdir);
+    yui($subdir, 'min');
+    deleteCrud($subdir);
+    fixParams($subdir);
+}
+
+sub resetSchema {
+    my ($subdir) = @_;
+
+    my $dbh = getDbh($subdir);
+    $dbh->do("DELETE FROM bz_schema");
+}
+
+sub grepSummaries {
+    my ($query, $subdir) = @_;
+    pushd("$HTDOCS_PATH");
+    my @dirs = grep { -d $_ && -e "$_/data/summary" } glob('*');
+    my $found = 0;
+    foreach my $dir (@dirs) {
+        my $summary = read_file("$dir/data/summary");
+        next unless $summary =~ /\Q$query\E/i;
+        if ($subdir && $dir eq $subdir) {
+            info("$dir: $summary");
+        } else {
+            print "$dir: $summary\n";
+        }
+        $found = 1;
+    }
+    $found || print "no matches\n";
+}
+
+sub showInfo {
+    my ($subdir) = @_;
+
+    my $bzr_branch = '';
+    my $filename = "$HTDOCS_PATH/$subdir/.bzr/branch/branch.conf";
+    if (-e $filename) {
+        my $conf = read_file($filename);
+        ($bzr_branch) = $conf =~ /submit_branch\s*=\s*(.+)\n/;
+        if (!$bzr_branch) {
+            ($bzr_branch) = $conf =~ /bound_location\s*=\s*(.+)\n/;
+        }
+    }
+
+    printf(
+        '  ' . trim("
+  subdir: %s
+ summary: %s
+    repo: %s
+     bzr: %s
+database: %s
+ comment: %s
+        ") . "\n",
+        $subdir,
+        getDirSummary($subdir) || '-',
+        getDirData($subdir, 'repo-version') || '-',
+        $bzr_branch || '-',
+        getCurrentDatabase($subdir),
+        getDirData($subdir, 'comment') || '-',
+    );
+}
+
+sub yui {
+    my ($subdir, $edition) = @_;
+    return unless -e "$HTDOCS_PATH/$subdir/js/yui/animation/animation-min.js";
+
+    my $src = "$YUI_PATH/build";
+
+    my $is_debug;
+    {
+        open(FH, "$HTDOCS_PATH/$subdir/js/yui/animation/animation-min.js")
+            or die $!;
+        my @lines = <FH>;
+        close(FH);
+        $is_debug = scalar @lines > 30;
+    }
+    return if $edition eq 'debug' && $is_debug;
+    return if $edition eq 'min' && !$is_debug;
+    
+    find(
+        sub {
+            my $filename = $File::Find::name;
+            $filename =~ s/^.*\Q$HTDOCS_PATH\/$subdir\/js\/yui\///;
+            return unless $filename =~ /^(.+)-min(.+)/;
+            my ($file, $ext) = ($1, $2);
+            my $replacement;
+            if ($edition eq 'debug') {
+                if (-e "$src/$file$ext") {
+                    $replacement = "$src/$file$ext";
+                }
+            } else {
+                if (-e "$src/$file-min$ext") {
+                    $replacement = "$src/$file-min$ext";
+                }
+            }
+            die "failed to find replacement\n" unless $replacement;
+            info("replacing $filename");
+            copy($replacement, $File::Find::name)
+                or die $!;
+        },
+        "$HTDOCS_PATH/$subdir/js/yui"
+    );
+}
+
+sub checkForTabs {
+    my ($subdir) = @_;
+
+    my $root = "$HTDOCS_PATH/$subdir";
+    my @invalid;
+    my @ignore = qw(
+        js/change-columns.js
+        t/002goodperl.t
+    );
+    find(sub {
+            my $file = $File::Find::name;
+            return if -d $file;
+            return unless -T $file;
+            return if $file =~ /^\Q$root\E\/(\.bzr|contrib|data|js\/yui|docs)\//;
+            return if $file =~ /\.patch$/;
+            my $filename = $file;
+            $filename =~ s/^\Q$root\E\///;
+            return if grep { $_ eq $filename } @ignore;
+            my $content = read_file($file);
+            return unless $content =~ /\t/;
+            push @invalid, $file;
+        },
+        "$HTDOCS_PATH/$subdir"
+    );
+
+    return unless scalar @invalid;
+    alert('The following files contain tabs:');
+    foreach my $filename (@invalid) {
+        $filename =~ s/^\Q$root\E\///;
+        alert($filename);
+    }
+    die "\n";
+}
+
+sub addBoilerPlates {
+    my ($subdir, $spec) = @_;
+    $spec ||= '';
+    my @missing = missingBoilerplate($subdir);
+    die "no new files with missing boiler-plates\n" unless scalar @missing;
+    
+    if ($spec ne '') {
+        $spec = quotemeta($spec);
+        @missing = grep { /$spec/i } @missing;
+        die "no matching files with missing boiler-plates\n" unless scalar @missing;
+    }
+
+    pushd("$HTDOCS_PATH/$subdir");
+    print "add boiler-plate to:\n";
+    foreach my $file (@missing) {
+        next unless confirm($file);
+        my ($ext) = $file =~ /^.+\.(.+)$/;
+        my $bp_file = "$DATA_PATH/boiler-plates/mpl.$ext";
+        die "failed to find boilerplate for .$ext\n" unless -e $bp_file;
+        my $bp = read_file($bp_file);
+        $bp =~ s/20__/2011/g;
+        # XXX need to place after #! line if present
+        my $content = $bp . read_file($file);
+        write_file($file, $content);
+        print "$file updated\n";
+    }
+    popd();
+}
+
+sub missingBoilerplate {
+    my ($subdir) = @_;
+    pushd("$HTDOCS_PATH/$subdir");
+    my $in_added = 0;
+    my @added_files;
+    foreach my $line (`bzr st`) {
+        chomp $line;
+        if ($line =~ /^  (.+)/) {
+            my $file = $1;
+            next if $file =~ /\@$/;
+            push @added_files, $file if $in_added;
+        } else {
+            $in_added = $line eq 'added:';
+        }
+    }
+    my @invalid;
+    foreach my $file (@added_files) {
+        next if -d $file;
+        my $content = read_file($file);
+        if ($content !~ /The contents of this file are subject to/ &&
+            $content !~ /is subject to the terms of the/) {
+            push @invalid, $file;
+        }
+    }
+    popd();
+    return @invalid;
+}
+
+sub runChecksetup {
+    my ($subdir, @args) = @_;
+    pushd("$HTDOCS_PATH/$subdir");
+    system "./checksetup.pl";
+    popd();
+}
+
+sub runTests {
+    my ($subdir, @args) = @_;
+    pushd("$HTDOCS_PATH/$subdir");
+    my @tests;
+    if (scalar @args) {
+        foreach my $arg (@args) {
+            push @tests, glob("t/*$arg*.t");
+        }
+    } else {
+        push @tests, glob("t/*.t");
+    }
+    runtests(@tests);
+    popd();
+}
+
+sub runXtTests {
+    my ($subdir, @args) = @_;
+    pushd("$HTDOCS_PATH/$subdir");
+    $ENV{BZ_WRITE_TESTS} = 1;
+    runtests('xt/search.t');
+    popd();
+}
+
+sub fixAttributes {
+    my ($subdir) = @_;
+    return unless -d "$HTDOCS_PATH/$subdir/.bzr";
+    pushd("$HTDOCS_PATH/$subdir");
+    foreach my $line (`bzr diff`) {
+        next unless $line =~ /modified file '([^']+)' \(properties changed: ([+-]x) to [+-]x\)/;
+        my ($file, $perm) = ($1, $2);
+        info("fixing properties for $file");
+        $file = '"' . $file . '"' if $file =~ / /;
+        system("chmod $perm $file");
+    }
+    popd();
+}
+
+sub fixPerms {
+    my ($subdir) = @_;
+    pushd("$HTDOCS_PATH/$subdir");
+    my @spec = glob('*');
+    push @spec, '.htaccess';
+    push @spec, '.bzr' if -d "$HTDOCS_PATH/$subdir/.bzr";
+    my $user = getpwuid($>);
+    system("chgrp -R --silent $LOCALCONFIG{webservergroup} @spec");
+    @spec = grep { $_ ne 'data' } @spec;
+    sudoOnOutput("chown -R $user @spec");
+    sudoOnOutput('find . -path ./data -prune -type d -exec chmod g+x {} \;');
+    foreach my $file (`find . -type f -perm /111`) {
+        chomp $file;
+        next if $file =~ /\.(cgi|pl|swp)$/;
+        next if $file =~ /^\.\/contrib\//;
+        info("fixing permissions for $file");
+        $file = '"' . $file . '"' if $file =~ / /;
+        sudoOnOutput("chmod -x $file");
+    }
+    popd();
+}
+
+sub sudoOnOutput {
+    my ($command) = @_;
+    my $output = `$command 2>&1`;
+    if ($output) {
+        info($command);
+        die $output;
+        info("escalating $command");
+        system "sudo $command";
+    }
+}
+
+sub getRepoBase {
+    my ($subdir) = @_;
+    my $repo_version = getDirData($subdir, 'repo-version');
+    if (!$repo_version) {
+        setRepoVersion($subdir);
+    }
+    $repo_version = getDirData($subdir, 'repo-version');
+
+    if ($repo_version =~ /^bmo-/) {
+        return 'bmo';
+    } elsif ($repo_version =~ /^bugzilla-/) {
+        return 'bugzilla';
+    } else {
+        die "unsupported repo_version: '$repo_version'";
+    }
+}
+
+__DATA__
+
+=head1 NAME
+
+bz - tool for manipulating bugzilla development instances.
+
+=head1 SYNOPSIS
+
+=over 4
+
+=item B<bz> B<new> I<subdir> I<repo> I<database>
+
+create a new instance
+
+=item B<bz> B<info>
+
+displays information about the current instance
+
+=item B<bz> B<list>
+
+lists all instances
+
+=item B<bz> B<patch> [I<patch number or url>]
+
+download and apply a patch
+
+=item B<bz> B<newpatch> [I<patch number or url>]
+
+revert current patch, then download and apply a patch
+
+=item B<bz> B<diff> [-quick] [I<patch number>] [I<files>]
+
+generate a diff against bzr; tests will be executed if I<-quick> is not specified
+
+=item B<bz> B<db> [I<database>]
+
+show or change the database
+
+=item B<bz> B<fix>
+
+various fixes to make the instance work (params, perms, etc)
+
+=item B<bz> B<fix-all>
+
+runs B<fix> on all instances
+
+=item B<bz> B<unfix>
+
+reverts fixes applied by B<fix>
+
+=item B<bz> B<grep> I<query>
+
+search summarys for the specified query
+
+=item B<bz> B<test>
+
+runs bugzilla's test suite
+
+=item B<bz> B<checksetup> | B<cs>
+
+runs bugzilla's checksetup.pl
+
+=item B<bz> B<reset-schema>
+
+rebuilds C<bz_schema> from the database
+
+=item B<bz> B<yui-debug>
+
+switches the yui libs to -debug version
+
+=item B<bz> B<yui-min>
+
+switches the yui libs to -min version
+
+=back

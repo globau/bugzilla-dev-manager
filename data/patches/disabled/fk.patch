@@ -1,0 +1,51 @@
+=== modified file 'Bugzilla/DB/Schema.pm'
+--- Bugzilla/DB/Schema.pm	2011-08-05 04:42:43 +0000
++++ Bugzilla/DB/Schema.pm	2011-09-21 14:18:50 +0000
+@@ -1813,12 +1813,32 @@
+     my $to_column = $references->{COLUMN} || confess "No column in reference";
+     my $fk_name   = $self->_get_fk_name($table, $column, $references);
+ 
++    return if $self->_fk_exists($fk_name);
+     return "\n     CONSTRAINT $fk_name FOREIGN KEY ($column)\n"
+          . "     REFERENCES $to_table($to_column)\n"
+          . "      ON UPDATE $update ON DELETE $delete";
+ }
+ 
+-# Generates a name for a Foreign Key. It's separate from get_fk_ddl
++sub _fk_exists {
++    my ($self, $fk_name) = @_;
++    if (!$self->{private_bz_fk_cache}) {
++        print "Reading foreign keys...\n";
++        my $rows = Bugzilla->dbh->selectall_arrayref(
++            "SELECT CONSTRAINT_NAME
++               FROM information_schema.TABLE_CONSTRAINTS
++              WHERE CONSTRAINT_SCHEMA = DATABASE()
++                    AND CONSTRAINT_TYPE = 'FOREIGN KEY'"
++        );
++        foreach my $row (@$rows) {
++            my $name = $row->[0];
++            next if $name eq 'PRIMARY';
++            $self->{private_bz_fk_cache}->{$name} = 1;
++        }
++    }
++    return exists $self->{private_bz_fk_cache}->{$fk_name};
++}
++
++#Generates a name for a Foreign Key. It's separate from get_fk_ddl
+ # so that certain databases can override it (for shorter identifiers or
+ # other reasons).
+ sub _get_fk_name {
+@@ -1849,10 +1869,10 @@
+     foreach my $column (keys %$column_fks) {
+         my $def = $column_fks->{$column};
+         my $fk_string = $self->get_fk_ddl($table, $column, $def);
+-        push(@add, $fk_string);
++        push(@add, $fk_string) if $fk_string;
+     }
+     my @sql;
+-    if ($self->MULTIPLE_FKS_IN_ALTER) {
++    if ($self->MULTIPLE_FKS_IN_ALTER && scalar(@add)) {
+         my $alter = "ALTER TABLE $table ADD " . join(', ADD ', @add);
+         push(@sql, $alter);
+     }
+

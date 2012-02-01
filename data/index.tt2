@@ -1,0 +1,244 @@
+<html>
+<head>
+<title>bugzilla-dev</title>
+<style>
+
+body {
+    font-family: "Helvetica Neue", "Nimbus Sans L", Arial, sans-serif;
+    background: url(bug.gif) no-repeat fixed top right;
+}
+
+a {
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+tr:hover {
+    background: #eee;
+}
+
+td, th {
+    cursor: default;
+    font-size: 10pt;
+}
+
+th {
+    text-align: left;
+}
+
+.comment {
+    font-style: italic;
+    cursor: text;
+}
+
+.comment .none {
+    color: silver;
+}
+
+</style>
+<script>
+
+var comments = new Array();
+var summaries = new Array();
+[% FOREACH instance = instances %]
+comments['dir_[% instance.dir FILTER js %]'] = '[% instance.comment FILTER js %]';
+summaries['dir_[% instance.dir FILTER js %]'] = '[% instance.summary FILTER js %]';
+[% END %]
+
+var xhr = false;
+/*@cc_on @*/
+/*@if (@_jscript_version >= 5)
+try {
+    xhr = new ActiveXObject("Msxml2.XMLHTTP");
+} catch (e) {
+    try {
+        xhr = new ActiveXObject("Microsoft.XMLHTTP");
+    } catch (E) {
+        xhr = false;
+    }
+}
+@end @*/
+if (!xhr && typeof XMLHttpRequest != 'undefined') {
+    try {
+        xhr = new XMLHttpRequest();
+    } catch (e) {
+        xhr = false;
+    }
+}
+if (!xhr && window.createRequest) {
+    try {
+        xhr = window.createRequest();
+    } catch (e) {
+        xhr = false;
+    }
+}
+
+//
+
+var editor_dir;
+var editor_el;
+var editor_saved;
+
+String.prototype.escapeHTML = function () {
+    return (
+        this.replace(/&/g,'&amp;').replace(/>/g,'&gt;').
+             replace(/</g,'&lt;').replace(/"/g,'&quot;')
+    );
+};
+
+function set_comment(dir, el) {
+    enable_editor(dir, el);
+}
+
+function enable_editor(dir, el) {
+    if (editor_el)
+        disable_editor();
+    editor_dir = dir;
+    editor_el = el;
+    editor_saved = el.innerHTML;
+    el.innerHTML =
+        '<input id="editor" value="' + comments['dir_'+dir].escapeHTML() + '" ' +
+        'onblur="disable_editor(true)" onkeypress="editor_key(event)">';
+    var editor = document.getElementById('editor');
+    editor.style.width = (el.clientWidth - 100) + 'px';
+    editor.select();
+    editor.focus();
+}
+
+function disable_editor(save) {
+    if (save) {
+        var comment = document.getElementById('editor').value;
+        if (comment != comments['dir_' + editor_dir]) {
+            xhr.open("GET", '?dir=' + escape(editor_dir) + '&comment=' + encodeURIComponent(comment));
+            xhr.send(null);
+            comments['dir_' + editor_dir] = comment;
+            if (comment == '') {
+                editor_saved = '<span class="none">comment</span>';
+            } else {
+                editor_saved = comment.escapeHTML();
+            }
+        }
+    }
+    editor_el.innerHTML = editor_saved;
+    editor_dir = undefined;
+    editor_el = undefined;
+    editor_saved = undefined;
+}
+
+function editor_key(e) {
+    var key = e.charCode || e.keyCode;
+    if (key == 27)
+        disable_editor(false);
+    else if (key == 13)
+        disable_editor(true);
+}
+
+function delete_instance(dir) {
+    if (!confirm('Do you really want to delete "' + dir + '":\n\n' + summaries['dir_'+dir]))
+        return false;
+    var tr = document.getElementById('tr_' + dir);
+    tr.parentNode.removeChild(tr);
+    xhr.open("GET", '?dir=' + encodeURIComponent(dir) + '&delete=1');
+    xhr.send(null);
+    return false;
+}
+
+</script>
+</head>
+<body>
+
+<table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+[% shown_gap = 0 %]
+[% FOREACH instance = instances %]
+    [% IF loop.first %]
+        <tr>
+            <th>dir</th>
+            <th>repo/db</th>
+            <th width="100%" colspan="7">&nbsp;</th>
+        </tr>
+    [% END %]
+    [% IF (!shown_gap && instance.id) %]
+        [% shown_gap = 1 %]
+        <tr>
+            <td colspan="7">&nbsp;</td>
+        </tr>
+        <tr>
+            <th>dir</th>
+            <th>product</th>
+            <th>summary</th>
+            <th>repo/db</th>
+            <th>status</th>
+            <th>assignee</th>
+            <th>&nbsp;</th>
+        </tr>
+    [% END %]
+    <tr id="tr_[% instance.dir FILTER html %]">
+        <td nowrap>
+            <a href="[% instance.dir FILTER url %]/">[% instance.dir FILTER html %]</a>
+            [% IF instance.status == 'RESOLVED' %]
+                [<a href="#" onclick="return delete_instance('[% instance.dir FILTER js%]')">×</a>]
+            [% END %]
+        </td>
+      [% IF instance.id %]
+        <td nowrap>
+            [% IF instance.product == 'Bugzilla' %]
+                bugzilla
+            [% ELSIF instance.product == 'bugzilla.mozilla.org' %]
+                bmo
+            [% ELSE %]
+                [% instance.product FILTER html %]
+            [% END %]
+        </td>
+        <td>
+            <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=[% instance.id %]" target="_blank">
+            [% instance.summary FILTER html %]
+            </a>
+        </td>
+        <td nowrap>
+            [% IF instance.repo %]
+                [% instance.repo %]
+            [% ELSE %]
+                -
+            [% END ~%]
+            &nbsp;/&nbsp;
+            [%~ IF instance.db %]
+                [% instance.db %]
+            [% ELSE %]
+                -
+            [% END %]
+        </td>
+        <td nowrap>
+            [% instance.status FILTER html %]
+        </td>
+        <td nowrap>
+            [% instance.assigned_to FILTER html %]
+        </td>
+        <td class="comment" onclick="set_comment('[% instance.dir FILTER js %]', this)" nowrap>
+            [% PROCESS comment %]
+        </td>
+      [% ELSE %]
+        <td nowrap>
+            [% instance.repo FILTER html %]
+        </td>
+        <td colspan="5" class="comment" onclick="set_comment('[% instance.dir FILTER js %]', this)">
+            [% PROCESS comment %]
+        </td>
+      [% END %]
+    </tr>
+[% END %]
+
+</table>
+</body>
+</html>
+
+[% BLOCK comment %]
+    [% IF instance.comment == '' %]
+        <span class="none">comment</span>
+    [% ELSE %]
+        [% instance.comment FILTER html %]
+    [% END %]
+[% END %]

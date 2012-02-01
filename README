@@ -1,0 +1,35 @@
+
+this is how i manage my bugzilla development environments.  i'll have to do a
+real readme at some stage.
+
+it's here just so i can version control it; i don't really expect it to work
+anywhere outside my vm :)
+
+INSTALL
+
+1. edit BugzillaDevConfig.pm
+2. edit the lib path in bz and www/index.cgi
+3. add an shell alias to bz, or drop a symlink in your path
+4. create a working directory (can be based anywhere):
+     /opt/bugzilla/htdocs
+     /opt/bugzilla/repo
+5. change apache to set it to run as your shell user, point
+   the default directory to your htdocs
+6. create a symlink from every file in www/ in htdocs:
+     bkg_warning.png -> /opt/bugzilla/repo/git/bugzilla-dev-manager/www/bkg_warning.png
+     bug.gif -> /opt/bugzilla/repo/git/bugzilla-dev-manager/www/bug.gif
+     favicon.ico -> /opt/bugzilla/repo/git/bugzilla-dev-manager/www/favicon.ico
+     index.cgi -> /opt/bugzilla/repo/git/bugzilla-dev-manager/www/index.cgi
+     mail_warning.png -> /opt/bugzilla/repo/git/bugzilla-dev-manager/www/mail_warning.png
+
+and other stuff i've probably missed :)
+
+LICENSE
+
+Any copyright is dedicated to the Public Domain.
+http://creativecommons.org/publicdomain/zero/1.0/
+
+
+
+-byron
+

@@ -1,0 +1,13 @@
+=== modified file 'Bugzilla/Mailer.pm'
+--- Bugzilla/Mailer.pm	2011-11-30 16:13:29 +0000
++++ Bugzilla/Mailer.pm	2011-12-05 17:43:14 +0000
+@@ -151,6 +151,8 @@
+     Bugzilla::Hook::process('mailer_before_send', 
+                             { email => $email, mailer_args => \@args });
+ 
++    return if $email->header('to') eq '';
++
+     $email->walk_parts(sub {
+         my ($part) = @_;
+         return if $part->parts > 1; # Top-level
+
