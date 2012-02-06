@@ -130,10 +130,10 @@ if ($action eq 'new') {
     info("unfix $subdir");
     unfix($subdir);
 
-} elsif ($action eq 'reset-schema') {
+} elsif ($action eq 'drop-table') {
     my $subdir = getCurrentSubdir();
-    info("resetting schema for " . getCurrentDatabase($subdir));
-    resetSchema($subdir);
+    @ARGV or die "syntax: bz drop-table <table>\n";
+    dropTable($subdir, @ARGV);
 
 } elsif ($action eq 'boilerplate' or $action eq 'bp') {
     my $subdir = getCurrentSubdir();
@@ -751,11 +751,47 @@ sub unfix {
     fixParams($subdir);
 }
 
-sub resetSchema {
-    my ($subdir) = @_;
+sub dropTable {
+    my ($subdir, @tables) = @_;
 
     my $dbh = getDbh($subdir);
-    $dbh->do("DELETE FROM bz_schema");
+    my $database = getCurrentDatabase($subdir);
+
+    foreach my $table (@tables) {
+        my ($exists) = $dbh->selectrow_array("
+            SELECT 1
+              FROM information_schema.tables
+             WHERE table_schema = '$database'
+                   AND table_name = '$table'
+        ");
+        if ($exists) {
+            exit unless confirm("are you sure you want to drop the table '$table'?");
+        }
+    }
+
+    info("loading schema");
+    pushd("$HTDOCS_PATH/$subdir");
+    my $schema;
+    my $bz_dbh;
+    eval '
+        use Bugzilla;
+        $bz_dbh = Bugzilla->dbh;
+        $schema = $bz_dbh->_bz_real_schema;
+    ';
+
+    foreach my $table (@tables) {
+        if (!exists $schema->{abstract_schema}->{$table}) {
+            die "failed to find table '$table' in bz_schema\n";
+        }
+    }
+    foreach my $table (@tables) {
+        info("dropping table '$table'");
+        $dbh->do("DROP TABLE $table");
+        delete $schema->{abstract_schema}->{$table};
+    }
+    info("updating bz_schema");
+    $bz_dbh->_bz_store_real_schema();
+    popd();
 }
 
 sub grepSummaries {
@@ -1096,9 +1132,9 @@ runs bugzilla's test suite
 
 runs bugzilla's checksetup.pl
 
-=item B<bz> B<reset-schema>
+=item B<bz> B<drop-tabe> I<table> [I<table>...]
 
-rebuilds C<bz_schema> from the database
+drops the table(s) from the schema and removes from bz_schema
 
 =item B<bz> B<yui-debug>
 
