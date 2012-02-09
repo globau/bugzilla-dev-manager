@@ -48,7 +48,6 @@ if ($action eq 'new') {
     updateRepo($repo);
     createSubDir($subdir, $repo);
     updateLocalConfig($subdir, $database);
-    applyLocalPatches($subdir);
     fixParams($subdir);
     fixHtAccess($subdir);
     pushd("$HTDOCS_PATH/$subdir");
@@ -64,7 +63,7 @@ if ($action eq 'new') {
     info("patching $subdir with #$patch");
     deployPatch($subdir, $patch);
 
-} elsif ($action eq 'newpatch') {
+} elsif ($action eq 'new-patch') {
     my $subdir = getCurrentSubdir();
     info("about to revert all current changes and apply a new patch");
     my $patch = validatePatch($subdir, shift @ARGV);
@@ -1096,7 +1095,7 @@ lists all instances
 
 download and apply a patch
 
-=item B<bz> B<newpatch> [I<patch number or url>]
+=item B<bz> B<new-patch> [I<patch number or url>]
 
 revert current patch, then download and apply a patch
 
