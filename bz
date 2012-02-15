@@ -136,7 +136,7 @@ if ($action eq 'new') {
 
 } elsif ($action eq 'boilerplate' or $action eq 'bp') {
     my $subdir = getCurrentSubdir();
-    addBoilerPlates($subdir);
+    addBoilerPlates($subdir, @ARGV);
 
 } elsif ($action eq 'test') {
     my $subdir = getCurrentSubdir();
@@ -919,20 +919,16 @@ sub checkForTabs {
 }
 
 sub addBoilerPlates {
-    my ($subdir, $spec) = @_;
-    $spec ||= '';
-    my @missing = missingBoilerplate($subdir);
-    die "no new files with missing boiler-plates\n" unless scalar @missing;
-    
-    if ($spec ne '') {
-        $spec = quotemeta($spec);
-        @missing = grep { /$spec/i } @missing;
-        die "no matching files with missing boiler-plates\n" unless scalar @missing;
+    my ($subdir, @files) = @_;
+
+    if (!scalar @files) {
+        @files = missingBoilerplate($subdir);
+        die "no new files with missing boiler-plates\n" unless scalar @files;
     }
 
     pushd("$HTDOCS_PATH/$subdir");
     print "add boiler-plate to:\n";
-    foreach my $file (@missing) {
+    foreach my $file (@files) {
         next unless confirm($file);
         my ($ext) = $file =~ /^.+\.(.+)$/;
         my $bp_file = "$DATA_PATH/boiler-plates/mpl.$ext";
@@ -1114,6 +1110,10 @@ various fixes to make the instance work (params, perms, etc)
 =item B<bz> B<fix-all>
 
 runs B<fix> on all instances
+
+=item B<bz> B<bp> [I<file>]
+
+prompts to add boiler plates to new files where it can't find one, or to the specified file
 
 =item B<bz> B<unfix>
 
