@@ -922,8 +922,31 @@ sub addBoilerPlates {
     my ($subdir, @files) = @_;
 
     if (!scalar @files) {
-        @files = missingBoilerplate($subdir);
+        my @added = getAddedFiles($subdir);
+        foreach my $file (@added) {
+            if (isMissingBoilerPlate("$HTDOCS_PATH/$subdir/$file")) {
+                push @files, $file;
+            }
+        }
         die "no new files with missing boiler-plates\n" unless scalar @files;
+
+    } elsif ($files[0] eq '-all') {
+        @files = ();
+        find(
+            sub {
+                my $name = $_;
+                return if -d $name;
+                return unless $name =~ /\./;
+                return if $name =~ /\.swp$/;
+                if (isMissingBoilerPlate($name)) {
+                    my $file = abs_path($name);
+                    $file =~ s/^$HTDOCS_PATH\/$subdir\///;
+                    push @files, $file;
+                }
+            },
+            '.'
+        );
+        die "no files with missing boiler-plates\n" unless scalar @files;
     }
 
     pushd("$HTDOCS_PATH/$subdir");
@@ -943,7 +966,7 @@ sub addBoilerPlates {
     popd();
 }
 
-sub missingBoilerplate {
+sub getAddedFiles {
     my ($subdir) = @_;
     pushd("$HTDOCS_PATH/$subdir");
     my $in_added = 0;
@@ -953,22 +976,23 @@ sub missingBoilerplate {
         if ($line =~ /^  (.+)/) {
             my $file = $1;
             next if $file =~ /\@$/;
-            push @added_files, $file if $in_added;
+            push @added_files, $file if $in_added && !-d $file;
         } else {
             $in_added = $line eq 'added:';
         }
     }
-    my @invalid;
-    foreach my $file (@added_files) {
-        next if -d $file;
-        my $content = read_file($file);
-        if ($content !~ /The contents of this file are subject to/ &&
-            $content !~ /is subject to the terms of the/) {
-            push @invalid, $file;
-        }
-    }
     popd();
-    return @invalid;
+    return @added_files;
+}
+
+sub isMissingBoilerPlate {
+    my ($file) = @_;
+    my $content = read_file($file);
+    if ($content !~ /The contents of this file are subject to/ &&
+        $content !~ /is subject to the terms of the/) {
+        return 1;
+    }
+    return 0;
 }
 
 sub runChecksetup {
@@ -1111,9 +1135,10 @@ various fixes to make the instance work (params, perms, etc)
 
 runs B<fix> on all instances
 
-=item B<bz> B<bp> [I<file>]
+=item B<bz> B<bp> [I<file> | B<-all>]
 
 prompts to add boiler plates to new files where it can't find one, or to the specified file
+if you pass B<-all> it will prompt for all files under the cwd which are missing boiler plates
 
 =item B<bz> B<unfix>
 

@@ -227,6 +227,10 @@ sub prompt {
     END { ReadMode(0) }
     do {
         usleep(250) while (not defined ($key = ReadKey(-1)));
+        if (ord($key) == 3) {
+            print "^C\n";
+            exit;
+        }
     } until $key =~ $valid_re;
     ReadMode(0);
     print "$key\n";
