@@ -12,7 +12,7 @@ use lib '/opt/bugzilla/repo/git/bugzilla-dev-manager';
 use BugzillaDev;
 use BugzillaDevConfig;
 use CGI;
-use Cwd 'abs_path';
+use Cwd qw(abs_path cwd);
 use File::Basename;
 use File::Copy;
 use File::Copy::Recursive qw(dircopy);
@@ -82,7 +82,13 @@ if ($action eq 'new') {
     my @files = @ARGV;
     if (!$quick) {
         info("running tests");
-        my @missing = missingBoilerplate($subdir);
+        my @missing;
+        my @added = getAddedFiles($subdir);
+        foreach my $file (@added) {
+            if (isMissingBoilerPlate("$HTDOCS_PATH/$subdir/$file")) {
+                push @missing, $file;
+            }
+        }
         if (scalar @missing) {
             foreach my $file (@missing) {
                 print "$file does not contain a boilerplate\n";
@@ -173,6 +179,10 @@ if ($action eq 'new') {
     my $subdir = getCurrentSubdir();
     info("switching to yui-$edition");
     yui($subdir, $edition);
+
+} elsif ($action eq 'mysql') {
+    my $subdir = getCurrentSubdir();
+    mysqlClient($subdir);
 
 } else {
     usage($action ? "unknown action '$action'" : '');
@@ -842,6 +852,23 @@ database: %s
     );
 }
 
+sub mysqlClient {
+    my ($subdir) = @_;
+
+    my $localconfig = read_file("$HTDOCS_PATH/$subdir/localconfig");
+
+    $localconfig =~ s/\n\$(\S+)/\n\$config{'$1'}/g;
+    our %config;
+    eval $localconfig;
+
+    my $cmd = "mysql -h $config{db_host} ";
+    $cmd .= "-P $config{db_port} " if $config{db_port};
+    $cmd .= "-u $config{db_user} -p$config{db_pass} ";
+    $cmd .= $config{db_name};
+
+    system $cmd;
+}
+
 sub yui {
     my ($subdir, $edition) = @_;
     return unless -e "$HTDOCS_PATH/$subdir/js/yui/animation/animation-min.js";
@@ -949,10 +976,18 @@ sub addBoilerPlates {
         die "no files with missing boiler-plates\n" unless scalar @files;
     }
 
+    my $cwd = cwd();
+    foreach my $file (@files) {
+        if (-e $file) {
+            $file = "$cwd/$file";
+        }
+        $file =~ s/^\Q$HTDOCS_PATH\/$subdir\/\E//;
+    }
+
     pushd("$HTDOCS_PATH/$subdir");
     print "add boiler-plate to:\n";
     foreach my $file (@files) {
-        next unless confirm($file);
+        next unless confirm("$file ?");
         my ($ext) = $file =~ /^.+\.(.+)$/;
         my $bp_file = "$DATA_PATH/boiler-plates/mpl.$ext";
         die "failed to find boilerplate for .$ext\n" unless -e $bp_file;
@@ -1159,6 +1194,10 @@ runs bugzilla's checksetup.pl
 =item B<bz> B<drop-tabe> I<table> [I<table>...]
 
 drops the table(s) from the schema and removes from bz_schema
+
+=item B<bz> B<mysql>
+
+runs mysql client connecting to the bugzilla database
 
 =item B<bz> B<yui-debug>
 

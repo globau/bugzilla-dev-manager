@@ -29,6 +29,64 @@ LICENSE
 Any copyright is dedicated to the Public Domain.
 http://creativecommons.org/publicdomain/zero/1.0/
 
+SYNOPSIS
+
+    bz new subdir repo database
+        create a new instance
+
+    bz info
+        displays information about the current instance
+
+    bz list
+        lists all instances
+
+    bz patch [patch number or url]
+        download and apply a patch
+
+    bz new-patch [patch number or url]
+        revert current patch, then download and apply a patch
+
+    bz diff [-quick] [patch number] [files]
+        generate a diff against bzr; tests will be executed if -quick is not
+        specified
+
+    bz db [database]
+        show or change the database
+
+    bz fix
+        various fixes to make the instance work (params, perms, etc)
+
+    bz fix-all
+        runs fix on all instances
+
+    bz bp [file | -all]
+        prompts to add boiler plates to new files where it can't find one, or
+        to the specified file if you pass -all it will prompt for all files
+        under the cwd which are missing boiler plates
+
+    bz unfix
+        reverts fixes applied by fix
+
+    bz grep query
+        search summarys for the specified query
+
+    bz test
+        runs bugzilla's test suite
+
+    bz checksetup | cs
+        runs bugzilla's checksetup.pl
+
+    bz drop-tabe table [table...]
+        drops the table(s) from the schema and removes from bz_schema
+
+    bz mysql
+        runs mysql client connecting to the bugzilla database
+
+    bz yui-debug
+        switches the yui libs to -debug version
+
+    bz yui-min
+        switches the yui libs to -min version
 
 
 -byron
