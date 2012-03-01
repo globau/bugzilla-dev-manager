@@ -28,6 +28,7 @@ BEGIN {
         info dieInfo alert confirm prompt
         getBmoProxy soapErrChk
         dirToBugID
+        getBugSummary
         getDirSummary setDirSummary
         getDirData setDirData
         pushd popd
@@ -94,13 +95,8 @@ sub soapErrChk {
     }
 }
 
-sub getDirSummary {
-    my ($dir, $cache_only) = @_;
-    my $id = dirToBugID($dir)
-        or return '';
-    my $value = getDirData($dir, 'summary');
-    return $value if $value ne '';
-    return '' if $cache_only;
+sub getBugSummary {
+    my ($id) = @_;
     my $proxy = getBmoProxy() || return '';
     my $response = $proxy->call(
         'Bug.get',
@@ -111,8 +107,19 @@ sub getDirSummary {
     );
     soapErrChk($response);
     my $rh = shift @{$response->result->{bugs}};
-    setDirData($dir, 'summary', $rh->{summary});
     return $rh->{summary};
+}
+
+sub getDirSummary {
+    my ($dir, $cache_only) = @_;
+    my $id = dirToBugID($dir)
+        or return '';
+    my $value = getDirData($dir, 'summary');
+    return $value if $value ne '';
+    return '' if $cache_only;
+    my $summary = getBugSummary($id);
+    setDirData($dir, 'summary', $summary);
+    return $summary;
 }
 
 sub setDirSummary {
@@ -221,7 +228,7 @@ sub prompt {
     $prompt = '?' unless $prompt;
     $prompt =~ s/\s+$//;
     $valid_re = qr/./ unless $valid_re;
-    print _coloured("$prompt ", 'yellow');
+    print chr(7), _coloured("$prompt ", 'yellow');
     my $key;
     ReadMode(4);
     END { ReadMode(0) }

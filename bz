@@ -54,7 +54,7 @@ if ($action eq 'new') {
     system "./checksetup.pl -t";
     system "./checksetup.pl";
     popd();
-    fix($subdir);
+    fixSubDir($subdir);
     info("$subdir created\n" . getDirSummary($subdir, 1));
 
 } elsif ($action eq 'patch') {
@@ -117,9 +117,25 @@ if ($action eq 'new') {
     }
 
 } elsif ($action eq 'fix') {
+    my ($subdir, $repo);
+    eval { $subdir = getCurrentSubdir() };
+    if ($@) {
+        eval { $repo = getCurrentRepoPath() };
+    }
+    if ($subdir) {
+        info("fixing $subdir");
+        fixSubDir($subdir);
+    } elsif ($repo) {
+        info("fixing $repo");
+        fixRepo($repo);
+    } else {
+        getCurrentSubdir();
+    }
+
+} elsif ($action eq 'disable-bugmail') {
     my $subdir = getCurrentSubdir();
-    info("fixing $subdir");
-    fix($subdir);
+    info("disabling bugmail for $subdir");
+    disableBugmail($subdir);
 
 } elsif ($action eq 'fix-all') {
     my $clean_params = dclone(\%PARAMS);
@@ -127,7 +143,7 @@ if ($action eq 'new') {
         %PARAMS = %$clean_params;
         $subdir = basename($subdir);
         info("fixing $subdir");
-        fix($subdir);
+        fixSubDir($subdir);
     }
 
 } elsif ($action eq 'unfix') {
@@ -216,6 +232,17 @@ sub getCurrentSubdir {
     die("invalid working directory: $subdir\n") unless $subdir =~ m#/htdocs/([^/]+)/#;
     $subdir = $1;
     return $subdir;
+}
+
+sub getCurrentRepoPath {
+    my $path = abs_path(cwd());
+    while (!-d "$path/.bzr") {
+        my @dirs = File::Spec->splitdir($path);
+        pop @dirs;
+        $path = File::Spec->catdir(@dirs);
+        die "cwd isn't a bzr repository\n" if $path eq '/';
+    }
+    return $path;
 }
 
 sub determineDefaultRepo {
@@ -483,7 +510,8 @@ sub deployPatch {
     $content =~ s/\015\012/\012/g;
 
     if (dirToBugID($subdir) && dirToBugID($subdir) != $bug_id) {
-        exit unless confirm("the patch from a different bug ($bug_id), continue?");
+        my $summary = getBugSummary($bug_id);
+        exit unless confirm("the patch from a different bug:\nBug $bug_id: $summary\ncontinue?");
     }
 
     pushd("$HTDOCS_PATH/$subdir");
@@ -544,7 +572,7 @@ sub diff {
         print "creating ${bug}_$revision.patch\n";
         write_file("${bug}_$revision.patch", $patch);
     }
-    fix($subdir);
+    fixSubDir($subdir);
     popd();
 }
 
@@ -715,7 +743,7 @@ sub deleteCrud {
     }
 }
 
-sub fix {
+sub fixSubDir {
     my ($subdir) = @_;
     applyLocalPatches($subdir);
     fixParams($subdir);
@@ -727,6 +755,55 @@ sub fix {
     if (getCurrentDatabase($subdir) eq 'bugs') {
         alert("current database is 'bugs'");
     }
+}
+
+sub fixRepo {
+    my ($path) = @_;
+    pushd($path);
+
+    find(
+        sub {
+            my $file = $_;
+            return if -d $file;
+            if ($file =~ /\~\d+\~$/ || $file =~ /^\._/ || $file =~ /\.(orig|rej)$/) {
+                print "deleting $file\n";
+                unlink($file);
+                return;
+            }
+            return unless -T $file;
+            my $content = read_file($file, binmod => ':raw');
+            return unless $content =~ /\015\012/;
+            my $filename = $File::Find::name;
+            $filename =~ s/^\.\///;
+            print "converting $filename to unix line endings\n";
+            $content =~ s/\015\012/\012/g;
+            write_file($file, { binmod => ':raw' }, $content);
+        },
+        '.'
+    );
+
+    foreach my $line (`bzr diff`) {
+        next unless $line =~ /modified file '([^']+)' \(properties changed: ([+-]x) to [+-]x\)/;
+        my ($file, $perm) = ($1, $2);
+        print "fixing permissions for $file\n";
+        system "chmod $perm $file";
+    }
+
+    foreach my $file (`find . -type f -perm /111`) {
+        chomp $file;
+        next if $file =~ /\.(cgi|pl|swp)$/i;
+        next if $file =~ /^\.\/contrib\//;
+        print "fixing permissions for $file\n";
+        system "chmod -x $file";
+    }
+
+    popd();
+}
+
+sub disableBugmail {
+    my ($subdir) = @_;
+    my $dbh = getDbh($subdir);
+    $dbh->do("UPDATE profiles SET disable_mail=1");
 }
 
 sub setRepoVersion {
@@ -806,7 +883,7 @@ sub dropTable {
 sub grepSummaries {
     my ($query, $subdir) = @_;
     pushd("$HTDOCS_PATH");
-    my @dirs = grep { -d $_ && -e "$_/data/summary" } glob('*');
+    my @dirs = grep { !-l $_ && -d $_ && -e "$_/data/summary" } glob('*');
     my $found = 0;
     foreach my $dir (@dirs) {
         my $summary = read_file("$dir/data/summary");
@@ -1190,6 +1267,10 @@ runs bugzilla's test suite
 =item B<bz> B<checksetup> | B<cs>
 
 runs bugzilla's checksetup.pl
+
+=item B<bz> B<disable-bugmail>
+
+disables bugmail for all users
 
 =item B<bz> B<drop-tabe> I<table> [I<table>...]
 
