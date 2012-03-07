@@ -156,6 +156,16 @@ if ($action eq 'new') {
     @ARGV or die "syntax: bz drop-table <table>\n";
     dropTable($subdir, @ARGV);
 
+} elsif ($action eq 'drop-column') {
+    my $subdir = getCurrentSubdir();
+    @ARGV or die "syntax: bz drop-column <custom_field>\n";
+    dropColumn($subdir, @ARGV);
+
+} elsif ($action eq 'drop-cf') {
+    my $subdir = getCurrentSubdir();
+    @ARGV or die "syntax: bz drop-cf <custom_field>\n";
+    die "not implemented\n";
+
 } elsif ($action eq 'boilerplate' or $action eq 'bp') {
     my $subdir = getCurrentSubdir();
     addBoilerPlates($subdir, @ARGV);
@@ -163,6 +173,7 @@ if ($action eq 'new') {
 } elsif ($action eq 'test') {
     my $subdir = getCurrentSubdir();
     info("running tests");
+    checkForTabs($subdir);
     runTests($subdir, @ARGV);
 
 } elsif ($action eq 'xt') {
@@ -857,13 +868,8 @@ sub dropTable {
 
     info("loading schema");
     pushd("$HTDOCS_PATH/$subdir");
-    my $schema;
-    my $bz_dbh;
-    eval '
-        use Bugzilla;
-        $bz_dbh = Bugzilla->dbh;
-        $schema = $bz_dbh->_bz_real_schema;
-    ';
+    my $bz_dbh = getBzDbh();
+    my $schema = $bz_dbh->_bz_real_schema;
 
     foreach my $table (@tables) {
         if (!exists $schema->{abstract_schema}->{$table}) {
@@ -875,9 +881,91 @@ sub dropTable {
         $dbh->do("DROP TABLE $table");
         delete $schema->{abstract_schema}->{$table};
     }
+
     info("updating bz_schema");
     $bz_dbh->_bz_store_real_schema();
     popd();
+}
+
+sub dropColumn {
+    my ($subdir, @names) = @_;
+
+    my $dbh = getDbh($subdir);
+    my $database = getCurrentDatabase($subdir);
+    my @columns;
+
+    foreach my $name (@names) {
+        if (scalar(split(/\./, $name)) != 2) {
+            die "invalid column '$name'; use table.column\n";
+        }
+        my ($table, $column) = split(/\./, $name);
+        my ($exists) = $dbh->selectrow_array("
+            SELECT 1
+              FROM information_schema.columns
+             WHERE table_schema = '$database'
+                   AND table_name = '$table'
+                   AND column_name = '$column'
+        ");
+        if ($exists) {
+            exit unless confirm("are you sure you want to drop the column '$table.$column'?");
+        }
+        push @columns, { table => $table, column => $column };
+    }
+
+    info("loading schema");
+    pushd("$HTDOCS_PATH/$subdir");
+    my $bz_dbh = getBzDbh();
+    my $schema = $bz_dbh->_bz_real_schema;
+
+    foreach my $rh (@columns) {
+        my ($table, $column) = ($rh->{table}, $rh->{column});
+        if (!exists $schema->{abstract_schema}->{$table}) {
+            die "failed to find table '$table' in bz_schema\n";
+        }
+        my $table_schema = $schema->{abstract_schema}->{$table};
+        my @fields = @{$table_schema->{FIELDS}};
+        my $found = 0;
+        for (my $i = 0; $i < scalar(@fields); $i += 2) {
+            my ($name, $rh) = @fields[$i, $i + 1];
+            if ($name eq $column) {
+                $found = 1;
+                last;
+            }
+        }
+        if (!$found) {
+            die "failed to find column '$column' in table '$table' in bz_schema\n";
+        }
+    }
+
+    foreach my $rh (@columns) {
+        my ($table, $column) = ($rh->{table}, $rh->{column});
+        my $table_schema = $schema->{abstract_schema}->{$table};
+        my @fields = @{$table_schema->{FIELDS}};
+        info("dropping '$table.$column'");
+        $dbh->do("ALTER TABLE $table DROP COLUMN $column");
+        my @new_fields;
+        for (my $i = 0; $i < scalar(@fields); $i += 2) {
+            my ($name, $rh) = @fields[$i, $i + 1];
+            if ($name ne $column) {
+                push @new_fields, ($name, $rh);
+            }
+        }
+        $schema->{abstract_schema}->{$table}->{FIELDS} = \@new_fields;
+    }
+
+    info("updating bz_schema");
+    $bz_dbh->_bz_store_real_schema();
+    popd();
+}
+
+sub getBzDbh {
+    my ($subdir) = @_;
+    my ($dbh);
+    eval '
+        use Bugzilla;
+        $dbh = Bugzilla->dbh;
+    ';
+    return $dbh;
 }
 
 sub grepSummaries {

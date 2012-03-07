@@ -63,6 +63,7 @@ our %PARAMS = (
     mailfrom => $MAIL_FROM,
     maintainer => $MAINTAINER,
     smtpserver => '',
+    specific_search_allow_empty_words => 0,
     timetrackinggroup => '',
     upgrade_notification => 'disabled',
     urlbase => $URL_BASE . '%s/',
