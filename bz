@@ -164,7 +164,7 @@ if ($action eq 'new') {
 } elsif ($action eq 'drop-cf') {
     my $subdir = getCurrentSubdir();
     @ARGV or die "syntax: bz drop-cf <custom_field>\n";
-    die "not implemented\n";
+    dropCustomField($subdir, @ARGV);
 
 } elsif ($action eq 'boilerplate' or $action eq 'bp') {
     my $subdir = getCurrentSubdir();
@@ -958,6 +958,48 @@ sub dropColumn {
     popd();
 }
 
+sub dropCustomField {
+    my ($subdir, @fields) = @_;
+
+    info("loading schema");
+    my $dbh = getBzDbh();
+
+    my @field_objs;
+    foreach my $field (@fields) {
+        my $field_obj;
+        eval "
+            use Bugzilla::Field;
+            \$field_obj = new Bugzilla::Field({'name' => '$field'});
+        ";
+        die "invalid custom field '$field':\n$@\n" if $@;
+        die "invalid custom field '$field'\n" unless $field_obj;
+        exit unless confirm("are you sure you want to drop the custom field '$field'?");
+        push @field_objs, $field_obj;
+    }
+
+    $dbh->bz_start_transaction;
+    foreach my $field (@field_objs) {
+        my $name = $field->name;
+        info("deleting $name...");
+        info("deleting from bugs_activity...");
+        $dbh->do("
+            DELETE
+              FROM bugs_activity 
+             WHERE fieldid = (SELECT id FROM fielddefs WHERE name = '$name')
+        ");
+        info("removing values from bugs...");
+        $dbh->do("UPDATE bugs SET $name = NULL");
+        info("dropping field...");
+        $field->remove_from_db();
+    }
+
+    $dbh->bz_commit_transaction;
+
+    # delete from bugs_activity
+    # update bugs set to null
+    # call bugzilla's delete
+}
+
 sub getBzDbh {
     my ($subdir) = @_;
     my ($dbh);
@@ -965,6 +1007,7 @@ sub getBzDbh {
         use Bugzilla;
         $dbh = Bugzilla->dbh;
     ';
+    initHandlers();
     return $dbh;
 }
 
@@ -1360,9 +1403,13 @@ runs bugzilla's checksetup.pl
 
 disables bugmail for all users
 
-=item B<bz> B<drop-tabe> I<table> [I<table>...]
+=item B<bz> B<drop-table> I<table> [I<table>...]
 
 drops the table(s) from the schema and removes from bz_schema
+
+=item B<bz> B<drop-cf> I<field> [I<field>...]
+
+drops the custom field(s), removing from activity and bugs
 
 =item B<bz> B<mysql>
 

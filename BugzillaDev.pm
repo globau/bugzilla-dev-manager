@@ -25,6 +25,7 @@ BEGIN {
     require Exporter;
     @ISA = 'Exporter';
     @EXPORT = qw(
+        initHandlers
         info dieInfo alert confirm prompt
         getBmoProxy soapErrChk
         dirToBugID
@@ -37,8 +38,11 @@ BEGIN {
     );
 }
 
-$SIG{__DIE__} = sub { die _coloured("@_", 'red') . "\n" };
-$SIG{__WARN__} = sub { print _coloured("@_", 'yellow') . "\n" };
+sub initHandlers {
+    $SIG{__DIE__} = sub { die _coloured("@_", 'red') . "\n" };
+    $SIG{__WARN__} = sub { print _coloured("@_", 'yellow') . "\n" };
+}
+initHandlers();
 
 my $USER_PATH = "~/.bz-dev";
 $USER_PATH =~ s{^~([^/]*)}{$1 ? (getpwnam($1))[7] : (getpwuid($<))[7]}e;
