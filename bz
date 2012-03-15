@@ -28,6 +28,9 @@ my $action = lc(shift @ARGV || '');
 
 if ($action eq 'new') {
     my $subdir = validateSubdir(shift @ARGV);
+    if (-e "$HTDOCS_PATH/$subdir/localconfig") {
+        die "$subdir already exists\n";
+    }
 
     if (!scalar @ARGV) {
         unshift @ARGV, determineDefaultRepo($subdir);
@@ -58,10 +61,23 @@ if ($action eq 'new') {
     info("$subdir created\n" . getDirSummary($subdir, 1));
 
 } elsif ($action eq 'patch') {
-    my $subdir = getCurrentSubdir();
-    my $patch = validatePatch($subdir, shift @ARGV);
-    info("patching $subdir with #$patch");
-    deployPatch($subdir, $patch);
+    my ($subdir, $repo);
+    eval { $subdir = getCurrentSubdir() };
+    if ($@) {
+        eval { $repo = getCurrentRepoPath() };
+    }
+    if ($subdir) {
+        my $patch = validatePatch($subdir, shift @ARGV);
+        info("patching $subdir with #$patch");
+        deploySubdirPatch($subdir, $patch);
+    } elsif ($repo) {
+        my $bugId = shift @ARGV
+            or die "bug number required\n";
+        my $patch = validatePatch($bugId, @ARGV);
+        deployRepoPatch($repo, $patch);
+    } else {
+        getCurrentSubdir();
+    }
 
 } elsif ($action eq 'new-patch') {
     my $subdir = getCurrentSubdir();
@@ -72,7 +88,7 @@ if ($action eq 'new') {
     system "$0 unfix";
     system "bzr revert";
     system "$0 fix";
-    deployPatch($subdir, $patch);
+    deploySubdirPatch($subdir, $patch);
 
 } elsif ($action eq 'diff') {
     my $subdir = getCurrentSubdir();
@@ -338,15 +354,17 @@ sub validateDatabase {
 }
 
 sub validatePatch {
-    my ($subdir, $patch) = @_;
+    my ($bug_id, $patch) = @_;
+    $bug_id ||= '';
 
-    if (!$patch && $subdir !~ /\D/) {
-        info("fetching patches from bug $subdir");
+    if (!$patch && $bug_id =~ /^\d+$/) {
+        info("fetching patches from bug $bug_id:");
+        print getBugSummary($bug_id), "\n";
         my $proxy = getBmoProxy();
-        my $response = $proxy->call('Bug.attachments', { ids => [ $subdir ], exclude_fields => [ 'data' ] });
+        my $response = $proxy->call('Bug.attachments', { ids => [ $bug_id ], exclude_fields => [ 'data' ] });
         soapErrChk($response);
         my @patches;
-        foreach my $rh (@{$response->result->{bugs}->{$subdir}}) {
+        foreach my $rh (@{$response->result->{bugs}->{$bug_id}}) {
             next unless $rh->{is_patch};
             next if $rh->{is_obsolete};
             push @patches, $rh;
@@ -499,7 +517,7 @@ sub getLocalPatchFiles {
     return @files;
 }
 
-sub deployPatch {
+sub deploySubdirPatch {
     my ($subdir, $patch) = @_;
 
     info("fetching patch $patch");
@@ -526,6 +544,42 @@ sub deployPatch {
     }
 
     pushd("$HTDOCS_PATH/$subdir");
+    info("creating $filename");
+    write_file($filename, { binmode => ':raw' }, $content);
+    system("patch -p0 < $filename");
+    popd();
+}
+
+sub deployRepoPatch {
+    my ($repodir, $patch) = @_;
+
+    info("fetching patch $patch");
+    my $proxy = getBmoProxy();
+
+    my $response = $proxy->call('Bug.attachments', { attachment_ids => [ $patch ] });
+    soapErrChk($response);
+
+    my $attachments = $response->result->{attachments};
+    die "failed to get attachment $patch information\n" unless exists $attachments->{$patch};
+    my $attachment = $attachments->{$patch};
+    printf STDERR "Bug %s: %s\n", $attachment->{bug_id}, $attachment->{description} || $attachment->{summary};
+    die "attachment is not a patch\n" unless $attachment->{is_patch} == '1';
+    die "attachment is obsolete\n" if $attachment->{is_obsolete} == '1';
+    my $reviewed = 0;
+    foreach my $flag (@{$attachment->{flags}}) {
+        if ($flag->{name} eq 'review' && $flag->{status} eq '+') {
+            $reviewed = 1;
+            last;
+        }
+    }
+    die "attachment is not r+\n" unless $reviewed;
+
+    my $bug_id = $attachment->{bug_id};
+    my $filename = "$bug_id-$patch.patch";
+    my $content = $attachment->{data};
+    $content =~ s/\015\012/\012/g;
+
+    pushd($repodir);
     info("creating $filename");
     write_file($filename, { binmode => ':raw' }, $content);
     system("patch -p0 < $filename");
