@@ -29,7 +29,7 @@ my $action = lc(shift @ARGV || '');
 if ($action eq 'new') {
     my $subdir = validateSubdir(shift @ARGV);
     if (-e "$HTDOCS_PATH/$subdir/localconfig") {
-        die "$subdir already exists\n";
+        die "$HTDOCS_PATH/$subdir already exists\n";
     }
 
     if (!scalar @ARGV) {
@@ -67,7 +67,7 @@ if ($action eq 'new') {
         eval { $repo = getCurrentRepoPath() };
     }
     if ($subdir) {
-        my $patch = validatePatch($subdir, shift @ARGV);
+        my $patch = validatePatch($subdir, @ARGV);
         info("patching $subdir with #$patch");
         deploySubdirPatch($subdir, $patch);
     } elsif ($repo) {
@@ -174,7 +174,7 @@ if ($action eq 'new') {
 
 } elsif ($action eq 'drop-column') {
     my $subdir = getCurrentSubdir();
-    @ARGV or die "syntax: bz drop-column <custom_field>\n";
+    @ARGV or die "syntax: bz drop-column <table.column>\n";
     dropColumn($subdir, @ARGV);
 
 } elsif ($action eq 'drop-cf') {
@@ -354,8 +354,16 @@ sub validateDatabase {
 }
 
 sub validatePatch {
-    my ($bug_id, $patch) = @_;
+    my ($bug_id, $patch, $from_bug_id) = @_;
     $bug_id ||= '';
+
+    if ($patch && $patch eq 'bug' && $from_bug_id) {
+        $patch = '';
+        $bug_id = $from_bug_id;
+    } elsif ($bug_id eq 'bug' && $patch) {
+        $bug_id = $patch;
+        $patch = '';
+    }
 
     if (!$patch && $bug_id =~ /^\d+$/) {
         info("fetching patches from bug $bug_id:");
@@ -395,6 +403,7 @@ sub updateRepo {
     my ($repo) = @_;
     pushd("$REPO_PATH/$repo");
     info("updating repo $repo");
+    fixRepo("$REPO_PATH/$repo", 1);
     system('bzr up');
     popd();
 }
@@ -408,6 +417,7 @@ sub createSubDir {
     foreach my $file (glob("$HTDOCS_PATH/$subdir/*.patch")) {
         unlink $file;
     }
+    die "$HTDOCS_PATH/$subdir/checksetup.pl missing\n" unless -e "$HTDOCS_PATH/$subdir/checksetup.pl";
 }
 
 sub getCurrentDatabase {
@@ -646,6 +656,12 @@ sub fixParams {
     my $filename = "$HTDOCS_PATH/$subdir/data/params";
     return unless -e $filename;
 
+    if (getRepoBase($subdir) eq 'bmo') {
+        foreach my $name (keys %PARAMS_BMO) {
+            $PARAMS{$name} = $PARAMS_BMO{$name};
+        }
+    }
+
     if ($subdir eq 'mod_perl') {
         $PARAMS{urlbase} = $MODPERL_BASE;
         $PARAMS{attachment_base} = $MODPERL_ATTACH_BASE;
@@ -681,7 +697,7 @@ sub getAnnounceHtml {
     my $id = dirToBugID($subdir);
     my $db = getCurrentDatabase($subdir);
     my $dev_name = $id
-        ? qq#<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=$subdir"><b>Bug $subdir</b></a>#
+        ? qq#<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=$id"><b>Bug $id</b></a>#
         : "<b>$subdir</b>";
     my $summary = CGI::escapeHTML(getDirSummary($subdir));
     my $url = $URL_BASE;
@@ -784,6 +800,7 @@ sub deleteCrud {
                 $filename =~ /\~\d+\~$/
                 || basename($filename) =~ /^\._/
                 || $filename =~ /\.orig$/
+                || $filename =~ /\.moved$/
                 || $filename =~ /\.rej$/;
             my $name = $filename;
             $name =~ s#^\Q$HTDOCS_PATH/$subdir/##;
@@ -823,7 +840,8 @@ sub fixSubDir {
 }
 
 sub fixRepo {
-    my ($path) = @_;
+    my ($path, $quick) = @_;
+    $quick = 0 unless $quick;
     pushd($path);
 
     find(
@@ -835,7 +853,9 @@ sub fixRepo {
                 unlink($file);
                 return;
             }
+            return if $quick;
             return unless -T $file;
+            return if $file =~ /\/\.bzr\//;
             my $content = read_file($file, binmod => ':raw');
             return unless $content =~ /\015\012/;
             my $filename = $File::Find::name;
@@ -846,6 +866,7 @@ sub fixRepo {
         },
         '.'
     );
+    return if $quick;
 
     foreach my $line (`bzr diff`) {
         next unless $line =~ /modified file '([^']+)' \(properties changed: ([+-]x) to [+-]x\)/;
@@ -1408,7 +1429,9 @@ displays information about the current instance
 
 lists all instances
 
-=item B<bz> B<patch> [I<patch number or url>]
+=item B<bz> B<patch> [I<attachment id>]
+=item B<bz> B<patch> [I<attachment url>]
+=item B<bz> B<patch> B<bug> [I<bug id>]
 
 download and apply a patch
 

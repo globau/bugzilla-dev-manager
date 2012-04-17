@@ -23,6 +23,7 @@ our @EXPORT = qw(
 
     %LOCALCONFIG
     %PARAMS
+    %PARAMS_BMO
 );
 
 our $HTDOCS_PATH              = '/opt/bugzilla/htdocs';
@@ -31,7 +32,7 @@ our $REPO_PATH                = '/opt/bugzilla/repo';
 our $YUI_PATH                 = '/opt/bugzilla/yui';
 
 our $DEFAULT_BMO_REPO         = 'bmo/4.0';
-our $DEFAULT_BMO_DB           = 'bugs_bmo_4_0';
+our $DEFAULT_BMO_DB           = 'bugs_bmo_20120301';
 our $BUGZILLA_TRUNK_MILESTONE = '4.4';
 
 our $URL_BASE                 = 'http://fedora/';
@@ -70,8 +71,13 @@ our %PARAMS = (
     usebugaliases => 1,
     useclassification => 1,
     useqacontact => 1,
+    user_info_class => 'CGI',
     usestatuswhiteboard => 1,
     usetargetmilestone => 1,
+);
+
+our %PARAMS_BMO = (
+    user_info_class => 'BrowserID,CGI',
 );
 
 1;
