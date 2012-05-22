@@ -121,6 +121,16 @@ sub get_instances {
                 $instance->{$field} = $rh->{$field};
             }
             setDirSummary($instance->{dir}, $instance->{summary});
+
+            # make assigned_to shorter
+            my $assigned_to = $instance->{assigned_to};
+            if ($assigned_to =~ /\@bugzilla\.bugs$/) {
+                $assigned_to = '-';
+            } else {
+                $assigned_to =~ s/^([^@]+).+/$1/;
+                $assigned_to = '-' if $assigned_to eq 'nobody';
+            }
+            $instance->{assigned_to} = $assigned_to;
         }
     }
 

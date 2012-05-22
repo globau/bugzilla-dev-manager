@@ -153,6 +153,13 @@ if ($action eq 'new') {
     info("disabling bugmail for $subdir");
     disableBugmail($subdir);
 
+} elsif ($action eq 'reset-password') {
+    my $subdir = getCurrentSubdir();
+    my $login = shift @ARGV
+        or die "syntax: bz reset-password <login>\n";
+    info("resetting password for $subdir");
+    resetPassword($subdir, $login);
+
 } elsif ($action eq 'fix-all') {
     my $clean_params = dclone(\%PARAMS);
     foreach my $subdir (grep { -e "$_/localconfig" } glob("$HTDOCS_PATH/*")) {
@@ -593,6 +600,8 @@ sub deployRepoPatch {
     info("creating $filename");
     write_file($filename, { binmode => ':raw' }, $content);
     system("patch -p0 < $filename");
+    info("deleting $filename");
+    unlink($filename);
     popd();
 }
 
@@ -892,6 +901,17 @@ sub disableBugmail {
     $dbh->do("UPDATE profiles SET disable_mail=1");
 }
 
+sub resetPassword {
+    my ($subdir, $login) = @_;
+    pushd("$HTDOCS_PATH/$subdir");
+
+    require Bugzilla;
+    require Bugzilla::Install;
+    Bugzilla::Install::reset_password($login);
+
+    popd();
+}
+
 sub setRepoVersion {
     my ($subdir) = @_;
     pushd("$HTDOCS_PATH/$subdir");
@@ -1035,6 +1055,7 @@ sub dropColumn {
 
 sub dropCustomField {
     my ($subdir, @fields) = @_;
+    pushd("$HTDOCS_PATH/$subdir");
 
     info("loading schema");
     my $dbh = getBzDbh();
@@ -1069,10 +1090,7 @@ sub dropCustomField {
     }
 
     $dbh->bz_commit_transaction;
-
-    # delete from bugs_activity
-    # update bugs set to null
-    # call bugzilla's delete
+    popd();
 }
 
 sub getBzDbh {
@@ -1479,6 +1497,10 @@ runs bugzilla's checksetup.pl
 =item B<bz> B<disable-bugmail>
 
 disables bugmail for all users
+
+=item B<bz> B<reset-password> I<login>
+
+resets the password for a login, without running all the checksetup guff.
 
 =item B<bz> B<drop-table> I<table> [I<table>...]
 

@@ -38,6 +38,14 @@ th {
     color: silver;
 }
 
+.dull {
+    color: silver;
+}
+
+.black {
+    color: black;
+}
+
 </style>
 <script>
 
@@ -156,7 +164,7 @@ function delete_instance(dir) {
 [% FOREACH instance = instances %]
     [% IF loop.first %]
         <tr>
-            <th>dir</th>
+            <th colspan="2">dir</th>
             <th>repo/db</th>
             <th width="100%" colspan="7">&nbsp;</th>
         </tr>
@@ -164,10 +172,10 @@ function delete_instance(dir) {
     [% IF (!shown_gap && instance.id) %]
         [% shown_gap = 1 %]
         <tr>
-            <td colspan="7">&nbsp;</td>
+            <td colspan="8">&nbsp;</td>
         </tr>
         <tr>
-            <th>dir</th>
+            <th colspan="2">dir</th>
             <th>product</th>
             <th>summary</th>
             <th>repo/db</th>
@@ -179,9 +187,13 @@ function delete_instance(dir) {
     <tr id="tr_[% instance.dir FILTER html %]">
         <td nowrap>
             <a href="[% instance.dir FILTER url %]/">[% instance.dir FILTER html %]</a>
-            [% IF instance.status == 'RESOLVED' %]
-                [<a href="#" onclick="return delete_instance('[% instance.dir FILTER js%]')">×</a>]
-            [% END %]
+        </td>
+        <td>
+            <a href="#" class="
+                [%~ instance.status == "RESOLVED" || instance.status == "VERIFIED"
+                    ? "black"
+                    : "dull" ~%]
+            " onclick="return delete_instance('[% instance.dir FILTER js%]')">×</a>
         </td>
       [% IF instance.id %]
         <td nowrap>
