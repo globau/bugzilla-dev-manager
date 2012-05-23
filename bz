@@ -157,7 +157,7 @@ if ($action eq 'new') {
     my $subdir = getCurrentSubdir();
     my $login = shift @ARGV
         or die "syntax: bz reset-password <login>\n";
-    info("resetting password for $subdir");
+    info("resetting password for $login");
     resetPassword($subdir, $login);
 
 } elsif ($action eq 'fix-all') {
