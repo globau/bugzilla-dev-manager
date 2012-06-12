@@ -238,7 +238,7 @@ sub prompt {
     END { ReadMode(0) }
     do {
         usleep(250) while (not defined ($key = ReadKey(-1)));
-        if (ord($key) == 3) {
+        if (ord($key) == 3 || ord($key) == 27) {
             print "^C\n";
             exit;
         }

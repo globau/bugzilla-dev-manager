@@ -87,6 +87,25 @@ if ($action eq 'new') {
 
     system "$0 unfix";
     system "bzr revert";
+
+    my $in_unknown = 0;
+    foreach my $line (`bzr st`) {
+        chomp $line;
+        if ($line =~ /^unknown:/) {
+            $in_unknown = 1;
+            next;
+        }
+        next unless $in_unknown;
+        last unless $line =~ /^\s+(.+)$/;
+        my $file = $1;
+        print "deleting $file\n";
+        if (-d $file) {
+            remove_tree($file) or die $!;
+        } else {
+            unlink($file) or die $!;
+        }
+    }
+
     system "$0 fix";
     deploySubdirPatch($subdir, $patch);
 
@@ -1078,13 +1097,9 @@ sub dropCustomField {
         my $name = $field->name;
         info("deleting $name...");
         info("deleting from bugs_activity...");
-        $dbh->do("
-            DELETE
-              FROM bugs_activity 
-             WHERE fieldid = (SELECT id FROM fielddefs WHERE name = '$name')
-        ");
+        $dbh->do("DELETE FROM bugs_activity WHERE fieldid = " . $field->id);
         info("removing values from bugs...");
-        $dbh->do("UPDATE bugs SET $name = NULL");
+        $dbh->do("UPDATE bugs SET $name = NULL WHERE $name IS NOT NULL");
         info("dropping field...");
         $field->remove_from_db();
     }
