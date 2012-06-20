@@ -233,11 +233,22 @@ sub prompt {
     $prompt =~ s/\s+$//;
     $valid_re = qr/./ unless $valid_re;
     print chr(7), _coloured("$prompt ", 'yellow');
+    my $start_time = (time);
     my $key;
     ReadMode(4);
     END { ReadMode(0) }
     do {
-        usleep(250) while (not defined ($key = ReadKey(-1)));
+        while (not defined ($key = ReadKey(-1))) {
+            if ((time) - $start_time > 10) {
+                my @message = split /\000/, read_file('/proc/self/cmdline');
+                shift @message;     # perl
+                $message[0] = 'bz'; # script
+                my $message = join(' ', @message);
+                GROWL("($message) needs your attention");
+                $start_time = (time);
+            }
+            usleep(250);
+        }
         if (ord($key) == 3 || ord($key) == 27) {
             print "^C\n";
             exit;

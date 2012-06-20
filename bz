@@ -118,7 +118,7 @@ if ($action eq 'new') {
     if (!$quick) {
         info("running tests");
         my @missing;
-        my @added = getAddedFiles($subdir);
+        my @added = getAddedFiles("$HTDOCS_PATH/$subdir");
         foreach my $file (@added) {
             if (isMissingBoilerPlate("$HTDOCS_PATH/$subdir/$file")) {
                 push @missing, $file;
@@ -209,8 +209,22 @@ if ($action eq 'new') {
     dropCustomField($subdir, @ARGV);
 
 } elsif ($action eq 'boilerplate' or $action eq 'bp') {
-    my $subdir = getCurrentSubdir();
-    addBoilerPlates($subdir, @ARGV);
+    my $path;
+
+    eval {
+        my $subdir = getCurrentSubdir();
+        $path = "$HTDOCS_PATH/$subdir";
+    };
+    if (!$path) {
+        eval {
+            $path = getCurrentRepoPath();
+        };
+    }
+    if (!$path || !-d $path) {
+        getCurrentSubdir();
+    }
+
+    addBoilerPlates($path, @ARGV);
 
 } elsif ($action eq 'test') {
     my $subdir = getCurrentSubdir();
@@ -1262,12 +1276,12 @@ sub checkForTabs {
 }
 
 sub addBoilerPlates {
-    my ($subdir, @files) = @_;
+    my ($path, @files) = @_;
 
     if (!scalar @files) {
-        my @added = getAddedFiles($subdir);
+        my @added = getAddedFiles($path);
         foreach my $file (@added) {
-            if (isMissingBoilerPlate("$HTDOCS_PATH/$subdir/$file")) {
+            if (isMissingBoilerPlate("$path/$file")) {
                 push @files, $file;
             }
         }
@@ -1283,7 +1297,7 @@ sub addBoilerPlates {
                 return if $name =~ /\.swp$/;
                 if (isMissingBoilerPlate($name)) {
                     my $file = abs_path($name);
-                    $file =~ s/^$HTDOCS_PATH\/$subdir\///;
+                    $file =~ s/^\Q$path\E\///;
                     push @files, $file;
                 }
             },
@@ -1297,20 +1311,27 @@ sub addBoilerPlates {
         if (-e $file) {
             $file = "$cwd/$file";
         }
-        $file =~ s/^\Q$HTDOCS_PATH\/$subdir\/\E//;
+        $file =~ s/^\Q$path\/\E//;
     }
 
-    pushd("$HTDOCS_PATH/$subdir");
+    pushd($path);
     print "add boiler-plate to:\n";
     foreach my $file (@files) {
         next unless confirm("$file ?");
         my ($ext) = $file =~ /^.+\.(.+)$/;
         my $bp_file = "$DATA_PATH/boiler-plates/mpl.$ext";
         die "failed to find boilerplate for .$ext\n" unless -e $bp_file;
-        my $bp = read_file($bp_file);
-        $bp =~ s/20__/2011/g;
-        # XXX need to place after #! line if present
-        my $content = $bp . read_file($file);
+        my @bp = read_file($bp_file);
+        foreach my $line (@bp) {
+            $line =~ s/20__/2011/g;
+        }
+        my @file = read_file($file);
+        if ($file[0] =~ /^#!/) {
+            splice(@file, 1, ($file[1] eq "\n" ? 1 : 0), ("\n", @bp));
+        } else {
+            splice(@file, 0, 0, @bp);
+        }
+        my $content = join("", @file);
         write_file($file, $content);
         print "$file updated\n";
     }
@@ -1318,8 +1339,8 @@ sub addBoilerPlates {
 }
 
 sub getAddedFiles {
-    my ($subdir) = @_;
-    pushd("$HTDOCS_PATH/$subdir");
+    my ($path) = @_;
+    pushd($path);
     my $in_added = 0;
     my @added_files;
     foreach my $line (`bzr st`) {

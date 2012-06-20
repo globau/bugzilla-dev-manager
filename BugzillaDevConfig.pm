@@ -24,6 +24,8 @@ our @EXPORT = qw(
     %LOCALCONFIG
     %PARAMS
     %PARAMS_BMO
+
+    GROWL
 );
 
 our $HTDOCS_PATH              = '/opt/bugzilla/htdocs';
@@ -79,5 +81,10 @@ our %PARAMS = (
 our %PARAMS_BMO = (
     user_info_class => 'BrowserID,CGI',
 );
+
+sub GROWL {
+    my $message = shift;
+    system "ssh byron\@mac 'echo \"$message\"|/usr/local/bin/growlnotify'";
+}
 
 1;
