@@ -596,7 +596,7 @@ sub deploySubdirPatch {
     pushd("$HTDOCS_PATH/$subdir");
     info("creating $filename");
     write_file($filename, { binmode => ':raw' }, $content);
-    system("patch -p0 < $filename");
+    applyPatch($filename);
     popd();
 }
 
@@ -632,10 +632,26 @@ sub deployRepoPatch {
     pushd($repodir);
     info("creating $filename");
     write_file($filename, { binmode => ':raw' }, $content);
-    system("patch -p0 < $filename");
+    applyPatch($filename);
     info("deleting $filename");
     unlink($filename);
     popd();
+}
+
+sub applyPatch {
+    my ($filename) = @_;
+    my @patch = read_file($filename);
+    open(PATCH, "|patch -p0");
+    foreach my $line (@patch) {
+        # === renamed file 'extensions/BMO/web/js/choose_product.js' => 'extensions/BMO/web/js/prod_comp_search.js'
+        if ($line =~ /^=== renamed file '([^']+)' => '([^']+)'/) {
+            print "renamed '$1' => '$2'\n";
+            rename($1, $2);
+            next;
+        }
+        print PATCH $line;
+    }
+    close(PATCH);
 }
 
 my %_bug_cache;
