@@ -32,6 +32,11 @@ if ($action eq 'new') {
         die "$HTDOCS_PATH/$subdir already exists\n";
     }
 
+    if (dirToBugID($subdir)) {
+        my $bug = getBugInfo(dirToBugID($subdir));
+        printf "Bug %s: %s\n", dirToBugID($subdir), $bug->{summary};
+    }
+
     if (!scalar @ARGV) {
         unshift @ARGV, determineDefaultRepo($subdir);
     }
@@ -59,6 +64,7 @@ if ($action eq 'new') {
     popd();
     fixSubDir($subdir);
     info("$subdir created\n" . getDirSummary($subdir, 1));
+    GROWL("$subdir created");
 
 } elsif ($action eq 'patch') {
     my ($subdir, $repo);
@@ -67,7 +73,7 @@ if ($action eq 'new') {
         eval { $repo = getCurrentRepoPath() };
     }
     if ($subdir) {
-        my $patch = validatePatch($subdir, @ARGV);
+        my $patch = validatePatch(dirToBugID($subdir), @ARGV);
         info("patching $subdir with #$patch");
         deploySubdirPatch($subdir, $patch);
     } elsif ($repo) {
@@ -82,7 +88,7 @@ if ($action eq 'new') {
 } elsif ($action eq 'new-patch') {
     my $subdir = getCurrentSubdir();
     info("about to revert all current changes and apply a new patch");
-    my $patch = validatePatch($subdir, shift @ARGV);
+    my $patch = validatePatch(dirToBugID($subdir), shift @ARGV);
     info("patching $subdir with #$patch");
 
     system "$0 unfix";
@@ -525,11 +531,15 @@ sub applyLocalPatches {
     pushd("$HTDOCS_PATH/$subdir");
 
     foreach my $file (getLocalPatchFiles($subdir)) {
-        info("applying patch from $file");
+        my $short_file = $file;
+        $short_file =~ s/^\Q$DATA_PATH\/patches\///;
+        info("applying patch from $short_file");
         system "patch --forward --strip=0 --input=$file --reject-file=- --batch";
     }
 
-    if (!-e "extensions/LimitedEmailEx" && -e "extensions/LimitedEmail/disabled") {
+    if (!-e "extensions/LimitedEmailEx"
+        && (!-e "extensions/LimitedEmail" || -e "extensions/LimitedEmail/disabled")
+    ) {
         info("deploying limited-email extension");
         symlink("$REPO_PATH/LimitedEmailEx", "$HTDOCS_PATH/$subdir/extensions/LimitedEmailEx")
             or die $!;
@@ -666,7 +676,7 @@ sub getBugInfo {
             'Bug.get',
             {
                 ids => [ $id ],
-                include_fields => [ 'id', 'product', 'version', 'target_milestone' ],
+                include_fields => [ 'id', 'product', 'version', 'target_milestone', 'summary' ],
             }
         );
         soapErrChk($response);
@@ -676,6 +686,7 @@ sub getBugInfo {
             product => $rh->{product},
             version => $rh->{version},
             milestone => $rh->{target_milestone},
+            summary => $rh->{summary},
         };
     }
 
