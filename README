@@ -40,7 +40,8 @@ SYNOPSIS
     bz list
         lists all instances
 
-    bz patch [patch number or url]
+    bz patch [attachment id] =item bz patch [attachment url] =item bz
+    patch bug [bug id]
         download and apply a patch
 
     bz new-patch [patch number or url]
@@ -76,8 +77,18 @@ SYNOPSIS
     bz checksetup | cs
         runs bugzilla's checksetup.pl
 
-    bz drop-tabe table [table...]
+    bz disable-bugmail
+        disables bugmail for all users
+
+    bz reset-password login
+        resets the password for a login, without running all the checksetup
+        guff.
+
+    bz drop-table table [table...]
         drops the table(s) from the schema and removes from bz_schema
+
+    bz drop-cf field [field...]
+        drops the custom field(s), removing from activity and bugs
 
     bz mysql
         runs mysql client connecting to the bugzilla database
@@ -87,7 +98,4 @@ SYNOPSIS
 
     bz yui-min
         switches the yui libs to -min version
-
-
--byron
 
