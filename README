@@ -24,6 +24,28 @@ INSTALL
 
 and other stuff i've probably missed :)
 
+i also have the following bash aliases:
+
+    function cdb() {
+        if [ -d "/opt/bugzilla/htdocs/$1" ]; then
+            cd "/opt/bugzilla/htdocs/$1"
+        else
+            cd "/opt/bugzilla/htdocs/`bz grep -n $@`"
+        fi
+        if [ -f "data/summary" ]; then
+            echo "[Bug ${PWD##*/}] `cat data/summary`" | perl -MTerm::ANSIColor -ne "print colored(\$_,'green')"
+        fi
+    }
+
+    function cdr() {
+        cd /opt/bugzilla/repo/$1
+    }
+
+    function bznew {
+        bz new $@
+        cd /opt/bugzilla/htdocs/$1
+    }
+
 LICENSE
 
 Any copyright is dedicated to the Public Domain.

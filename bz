@@ -266,10 +266,11 @@ if ($action eq 'new') {
     popd();
 
 } elsif ($action eq 'grep') {
-    my $query = "@ARGV";
+    my $outputDirOnly = grep { $_ eq '-n' } @ARGV;
+    my $query = join(' ', grep { $_ ne '-n' } @ARGV);
     die("missing query string\n") if $query eq '';
-    info("searching summaries for '$query'");
-    grepSummaries($query);
+    info("searching summaries for '$query'") unless $outputDirOnly;
+    grepSummaries($query, undef, $outputDirOnly);
 
 } elsif ($action eq 'list') {
     my $subdir;
@@ -1177,29 +1178,31 @@ sub exportSchema {
     pushd("$HTDOCS_PATH/$subdir");
 
     info("connecting");
-    pushd("$HTDOCS_PATH/$subdir");
     my $dbh = getBzDbh();
 
     my ($schema) = $dbh->selectrow_array("SELECT schema_data FROM bz_schema");
+    popd();
+
     info("writing schema to '$filename'");
     write_file($filename, $schema);
 }
 
 sub importSchema {
     my ($subdir, $filename) = @_;
+    my $schema = read_file($filename);
+
     pushd("$HTDOCS_PATH/$subdir");
 
     info("connecting");
     pushd("$HTDOCS_PATH/$subdir");
     my $dbh = getBzDbh();
 
-    my $schema = read_file($filename);
-
     return unless confirm("update database with schema from '$filename'? ");
     info("updating");
     my $sth = $dbh->prepare("UPDATE bz_schema SET schema_data = ?");
     $sth->bind_param(1, $schema, $dbh->BLOB_TYPE);
     $sth->execute();
+    popd();
 }
 
 sub getBzDbh {
@@ -1214,21 +1217,26 @@ sub getBzDbh {
 }
 
 sub grepSummaries {
-    my ($query, $subdir) = @_;
+    my ($query, $subdir, $outputDirOnly) = @_;
     pushd("$HTDOCS_PATH");
     my @dirs = grep { !-l $_ && -d $_ && -e "$_/data/summary" } glob('*');
     my $found = 0;
     foreach my $dir (@dirs) {
         my $summary = read_file("$dir/data/summary");
         next unless $summary =~ /\Q$query\E/i;
-        if ($subdir && $dir eq $subdir) {
-            info("$dir: $summary");
+        if ($outputDirOnly) {
+            print "$dir\n";
         } else {
-            print "$dir: $summary\n";
+            if ($subdir && $dir eq $subdir) {
+                info("$dir: $summary");
+            } else {
+                print "$dir: $summary\n";
+            }
         }
         $found = 1;
+        last if $outputDirOnly;
     }
-    $found || print "no matches\n";
+    $found || print STDERR "no matches\n";
 }
 
 sub showInfo {
@@ -1597,9 +1605,10 @@ if you pass B<-all> it will prompt for all files under the cwd which are missing
 
 reverts fixes applied by B<fix>
 
-=item B<bz> B<grep> I<query>
+=item B<bz> B<grep> [-n] I<query>
 
 search summarys for the specified query
+if -n is specified, just the first matching bug number is printed
 
 =item B<bz> B<test>
 
