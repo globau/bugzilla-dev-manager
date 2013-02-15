@@ -7,7 +7,8 @@ our @EXPORT = qw(
     $HTDOCS_PATH
     $DATA_PATH
     $REPO_PATH
-    $YUI_PATH
+    $YUI2_PATH
+    $YUI3_PATH
 
     $DEFAULT_BMO_REPO
     $DEFAULT_BMO_DB
@@ -31,11 +32,12 @@ our @EXPORT = qw(
 our $HTDOCS_PATH              = '/opt/bugzilla/htdocs';
 our $DATA_PATH                = '/opt/bugzilla/repo/git/bugzilla-dev-manager/data';
 our $REPO_PATH                = '/opt/bugzilla/repo';
-our $YUI_PATH                 = '/opt/bugzilla/yui';
+our $YUI2_PATH                = '/opt/bugzilla/yui2';
+our $YUI3_PATH                = '/opt/bugzilla/yui3';
 
 our $DEFAULT_BMO_REPO         = 'bmo/4.0';
-our $DEFAULT_BMO_DB           = 'bugs_bmo_20120301';
-our $BUGZILLA_TRUNK_MILESTONE = '4.4';
+our $DEFAULT_BMO_DB           = 'bugs_bmo_201301';
+our $BUGZILLA_TRUNK_MILESTONE = '5.0';
 
 our $URL_BASE                 = 'http://fedora/';
 our $ATTACH_BASE              = 'http://attach.fedora/';

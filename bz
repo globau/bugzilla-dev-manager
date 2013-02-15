@@ -81,7 +81,7 @@ if ($action eq 'new') {
         my $bugId = shift @ARGV
             or die "bug number required\n";
         my $patch = validatePatch($bugId, @ARGV);
-        deployRepoPatch($repo, $patch);
+        deployRepoPatch($repo, $patch, grep { $_ eq '-force' } @ARGV);
     } else {
         getCurrentSubdir();
     }
@@ -119,7 +119,8 @@ if ($action eq 'new') {
 } elsif ($action eq 'diff') {
     my $subdir = getCurrentSubdir();
     my $quick = grep { $_ eq '-quick' } @ARGV;
-    @ARGV = grep { $_ ne '-quick' } @ARGV;
+    my $stdout = grep { $_ eq '-' or $_ eq '-stdout' } @ARGV;
+    @ARGV = grep { $_ !~ /^-/ } @ARGV;
     my $bug = shift || $subdir;
     my @files = @ARGV;
     if (!$quick) {
@@ -127,6 +128,7 @@ if ($action eq 'new') {
         my @missing;
         my @added = getAddedFiles("$HTDOCS_PATH/$subdir");
         foreach my $file (@added) {
+            next unless -T "$HTDOCS_PATH/$subdir/$file";
             if (isMissingBoilerPlate("$HTDOCS_PATH/$subdir/$file")) {
                 push @missing, $file;
             }
@@ -138,10 +140,10 @@ if ($action eq 'new') {
             exit unless confirm("continue?");
         }
         checkForTabs($subdir);
-        runTests($subdir, 2, 4, 5, 8, 9, 10);
+        runTests($subdir, 2, 4, 5, 6, 8, 9, 10, 11);
     }
     info("making patch");
-    diff($subdir, $bug, @files);
+    diff($subdir, $bug, $stdout, @files);
 
 } elsif ($action eq 'db') {
     my $subdir = getCurrentSubdir();
@@ -176,7 +178,7 @@ if ($action eq 'new') {
 
 } elsif ($action eq 'disable-bugmail') {
     my $subdir = getCurrentSubdir();
-    info("disabling bugmail for $subdir");
+    info("disabling bugmail on " . getCurrentDatabase($subdir));
     disableBugmail($subdir);
 
 } elsif ($action eq 'reset-email-queue' || $action eq 'reset-queue') {
@@ -204,6 +206,11 @@ if ($action eq 'new') {
     my $subdir = getCurrentSubdir();
     info("unfix $subdir");
     unfix($subdir);
+
+} elsif ($action eq 'create-db' || $action eq 'create-database') {
+    my $subdir = getCurrentSubdir();
+    @ARGV or die "syntax: bz $action <database_name>\n";
+    createDatabase($subdir, @ARGV);
 
 } elsif ($action eq 'drop-table') {
     my $subdir = getCurrentSubdir();
@@ -285,11 +292,15 @@ if ($action eq 'new') {
     my $edition = $1;
     my $subdir = getCurrentSubdir();
     info("switching to yui-$edition");
-    yui($subdir, $edition);
+    yui($subdir, $edition, (grep { $_ eq '-force' } @ARGV));
 
 } elsif ($action eq 'mysql') {
     my $subdir = getCurrentSubdir();
     mysqlClient($subdir);
+
+} elsif ($action eq 'mysql-trace') {
+    my $subdir = getCurrentSubdir();
+    mysqlTraceToggle($subdir);
 
 } else {
     usage($action ? "unknown action '$action'" : '');
@@ -440,6 +451,9 @@ sub validatePatch {
             next unless $rh->{is_patch};
             next if $rh->{is_obsolete};
             push @patches, $rh;
+        }
+        if (!scalar @patches) {
+            die "no patches found\n";
         }
         if (scalar @patches < 10) {
             my $prompt = "  0. cancel\n";
@@ -609,7 +623,9 @@ sub deploySubdirPatch {
     my $attachment = $attachments->{$patch};
     printf STDERR "Bug %s: %s\n", $attachment->{bug_id}, $attachment->{description} || $attachment->{summary};
     die "attachment is not a patch\n" unless $attachment->{is_patch} == '1';
-    die "attachment is obsolete\n" if $attachment->{is_obsolete} == '1';
+    if ($attachment->{is_obsolete} == '1') {
+        return unless confirm('attachment is obsolete, continue?');
+    }
 
     my $bug_id = $attachment->{bug_id};
     my $filename = "$bug_id-$patch.patch";
@@ -629,7 +645,7 @@ sub deploySubdirPatch {
 }
 
 sub deployRepoPatch {
-    my ($repodir, $patch) = @_;
+    my ($repodir, $patch, $force) = @_;
 
     info("fetching patch $patch");
     my $proxy = getBmoProxy();
@@ -650,7 +666,9 @@ sub deployRepoPatch {
             last;
         }
     }
-    die "attachment is not r+\n" unless $reviewed;
+    if (!$force) {
+        die "attachment is not r+\n" unless $reviewed;
+    }
 
     my $bug_id = $attachment->{bug_id};
     my $filename = "$bug_id-$patch.patch";
@@ -712,7 +730,7 @@ sub getBugInfo {
 }
 
 sub diff {
-    my ($subdir, $bug, @files) = @_;
+    my ($subdir, $bug, $stdout, @files) = @_;
     die "Not a branch: $HTDOCS_PATH/$subdir\n" unless -e "$HTDOCS_PATH/$subdir/.bzr";
     pushd("$HTDOCS_PATH/$subdir");
 
@@ -728,13 +746,16 @@ sub diff {
 
     unfix($subdir);
     my $patch = `bzr diff @files`;
-    if ($bug eq '-') {
+    my $filename;
+    if ($bug eq '-' or $stdout) {
         print $patch;
     } else {
-        print "creating ${bug}_$revision.patch\n";
-        write_file("${bug}_$revision.patch", $patch);
+        $filename = "${bug}_$revision.patch";
+        print "creating $filename\n";
+        write_file($filename, $patch);
     }
     fixSubDir($subdir);
+    info("$filename created") if $filename;
     popd();
 }
 
@@ -1246,10 +1267,7 @@ sub showInfo {
     my $filename = "$HTDOCS_PATH/$subdir/.bzr/branch/branch.conf";
     if (-e $filename) {
         my $conf = read_file($filename);
-        ($bzr_branch) = $conf =~ /submit_branch\s*=\s*(.+)\n/;
-        if (!$bzr_branch) {
-            ($bzr_branch) = $conf =~ /bound_location\s*=\s*(.+)\n/;
-        }
+        ($bzr_branch) = $conf =~ /bound_location\s*=\s*(.+)\n/;
     }
 
     printf(
@@ -1287,45 +1305,99 @@ sub mysqlClient {
     system $cmd;
 }
 
-sub yui {
-    my ($subdir, $edition) = @_;
-    return unless -e "$HTDOCS_PATH/$subdir/js/yui/animation/animation-min.js";
-
-    my $src = "$YUI_PATH/build";
-
-    my $is_debug;
-    {
-        open(FH, "$HTDOCS_PATH/$subdir/js/yui/animation/animation-min.js")
-            or die $!;
-        my @lines = <FH>;
-        close(FH);
-        $is_debug = scalar @lines > 30;
+sub mysqlTraceToggle {
+    my ($subdir) = @_;
+    my $dbh = getDbh($subdir, 1);
+    my (undef, $value) = $dbh->selectrow_array("SHOW VARIABLES LIKE 'general_log'");
+    my (undef, $filename) = $dbh->selectrow_array("SHOW VARIABLES LIKE 'general_log_file'");
+    if ($value eq 'ON') {
+        info("disabling logging to $filename");
+        $value = 'OFF';
+    } else {
+        info("enabling logging to $filename");
+        $value = 'ON';
     }
-    return if $edition eq 'debug' && $is_debug;
-    return if $edition eq 'min' && !$is_debug;
-    
+    $dbh->do("SET GLOBAL general_log='$value'");
+}
+
+sub createDatabase {
+    my ($subdir, $db) = @_;
+    my $dbh = getDbh($subdir, 1);
+    $db = validateDatabase($db);
+    $dbh->do("CREATE DATABASE $db DEFAULT CHARACTER SET utf8");
+    info("database $db created");
+}
+
+sub yui {
+    my ($subdir, $edition, $force) = @_;
+    pushd("$HTDOCS_PATH/$subdir");
+    return unless -e "$HTDOCS_PATH/$subdir/js/yui/animation/animation-min.js";
+    die "unsupported edition '$edition'\n" unless $edition eq 'min' || $edition eq 'debug';
+
+    unless ($force) {
+        my @js = read_file('js/yui/yahoo/yahoo-min.js');
+        return if $edition eq 'min' && scalar(@js) <= 8;
+        return if $edition eq 'debug' && scalar(@js) > 8;
+    }
+
+    my $src = "$YUI2_PATH/build";
     find(
         sub {
             my $filename = $File::Find::name;
+            return if -d $filename;
             $filename =~ s/^.*\Q$HTDOCS_PATH\/$subdir\/js\/yui\///;
-            return unless $filename =~ /^(.+)-min(.+)/;
+            return unless
+                $filename =~ /^(.+)-min\.(.+)/
+                || $filename =~ /^(yahoo-dom-event\/yahoo-dom-event)\.(js)$/;
             my ($file, $ext) = ($1, $2);
             my $replacement;
             if ($edition eq 'debug') {
-                if (-e "$src/$file$ext") {
-                    $replacement = "$src/$file$ext";
+                if ($file eq 'yahoo-dom-event/yahoo-dom-event') {
+                    $replacement = "$file-debug.$ext";
+                } elsif (-e "$src/$file.$ext") {
+                    $replacement = "$file.$ext";
                 }
             } else {
-                if (-e "$src/$file-min$ext") {
-                    $replacement = "$src/$file-min$ext";
+                if ($file eq 'yahoo-dom-event/yahoo-dom-event') {
+                    $replacement = "$file.$ext";
+                } elsif (-e "$src/$file-min.$ext") {
+                    $replacement = "$file-min.$ext";
                 }
             }
-            die "failed to find replacement\n" unless $replacement;
-            info("replacing $filename");
-            copy($replacement, $File::Find::name)
+            die "failed to find replacement for $file" unless $replacement;
+            info("replacing $filename with $replacement");
+            copy("$src/$replacement", $File::Find::name)
                 or die $!;
         },
         "$HTDOCS_PATH/$subdir/js/yui"
+    );
+
+    $src = "$YUI3_PATH/build";
+    find(
+        sub {
+            my $filename = $File::Find::name;
+            return if -d $filename;
+            $filename =~ s/^.*\Q$HTDOCS_PATH\/$subdir\/js\/yui3\///;
+            return if $filename =~ /^gallery-/;
+            return unless
+                $filename =~ /^(.+)-min\.(.+)/;
+            my ($file, $ext) = ($1, $2);
+            my $replacement;
+            if ($edition eq 'debug') {
+                if (-e "$src/$file.$ext") {
+                    $replacement = "$file.$ext";
+                }
+            } else {
+                if (-e "$src/$file-min.$ext") {
+                    $replacement = "$file-min.$ext";
+                }
+            }
+            die "failed to find replacement for $filename" unless $replacement;
+            info("replacing $filename with $replacement");
+            copy("$src/$replacement", $File::Find::name)
+                or die $!;
+        },
+        "$HTDOCS_PATH/$subdir/js/yui3"
     );
 }
 
@@ -1342,7 +1414,7 @@ sub checkForTabs {
             my $file = $File::Find::name;
             return if -d $file;
             return unless -T $file;
-            return if $file =~ /^\Q$root\E\/(\.bzr|contrib|data|js\/yui|docs)\//;
+            return if $file =~ /^\Q$root\E\/(\.bzr|contrib|data|js\/yui\d?|docs)\//;
             return if $file =~ /\.patch$/;
             my $filename = $file;
             $filename =~ s/^\Q$root\E\///;
@@ -1479,6 +1551,14 @@ sub runTests {
 sub runXtTests {
     my ($subdir, @args) = @_;
     pushd("$HTDOCS_PATH/$subdir");
+    my $dbh = getDbh($subdir);
+    my ($bug_count) = $dbh->selectrow_array("SELECT COUNT(*) FROM bugs");
+    if ($bug_count) {
+        my $database = getCurrentDatabase($subdir);
+        die "unable to execute xt tests on $database because the bugs table is not empty\n";
+    }
+    # if the tests die, bugs_fulltext isn't cleared, and can result in duplicate key errors
+    $dbh->do('DELETE FROM bugs_fulltext');
     $ENV{BZ_WRITE_TESTS} = 1;
     runtests('xt/search.t');
     popd();
@@ -1650,6 +1730,10 @@ only import files exported by B<export-schema>, unless you like breaking bugzill
 =item B<bz> B<mysql>
 
 runs mysql client connecting to the bugzilla database
+
+=item B<bz> B<mysql-trace>
+
+toggles mysql query tracing
 
 =item B<bz> B<yui-debug>
 

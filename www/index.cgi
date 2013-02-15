@@ -72,16 +72,20 @@ $template->process("$DATA_PATH/index.tt2", $vars)
 
 sub get_instances {
     # get directories, sort non-bugs first
-    my @dirs = 
-        sort { 
+    my @dirs =
+        sort {
             my $a_bug = dirToBugID($a) ? 1 : 0;
             my $b_bug = dirToBugID($b) ? 1 : 0;
             return
                 ($a_bug <=> $b_bug)
                 or ($a cmp $b)
             ;
-        } 
-        grep { -d $_ && !-e "$_/.hidden"  }
+        }
+        grep {
+            -d $_
+            && !-e "$_/.hidden"
+            && -e "$_/localconfig"
+        }
         glob("*");
 
     # init instances

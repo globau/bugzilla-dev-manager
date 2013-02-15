@@ -1,0 +1,13 @@
+=== modified file 'template/en/default/list/list.html.tmpl'
+--- template/en/default/list/list.html.tmpl	2012-09-20 18:21:04 +0000
++++ template/en/default/list/list.html.tmpl	2012-11-07 09:08:28 +0000
+@@ -72,7 +72,7 @@
+ 
+   [% IF debug %]
+     <div class="bz_query_debug">
+-      <p>[% query FILTER html %]</p>
++      <pre>[% query FILTER html %]</pre>
+       <p>Execution time: [% query_time FILTER html %] seconds</p>
+       [% IF query_explain.defined %]
+         <pre>[% query_explain FILTER html %]</pre>
+

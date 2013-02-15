@@ -13,16 +13,3 @@
      # out how many hidden bugs are in a particular product (by doing
      # searches and looking at the number of rows the explain says it's
 
-=== modified file 'template/en/default/list/list.html.tmpl'
---- template/en/default/list/list.html.tmpl	2012-02-25 14:08:23 +0000
-+++ template/en/default/list/list.html.tmpl	2012-07-04 06:41:52 +0000
-@@ -58,7 +58,7 @@
-   </span>
- 
-   [% IF debug %]
--    <p class="bz_query">[% query FILTER html %]</p>
-+    <pre style="text-align:left">[% query FILTER html %]</pre>
-     [% IF query_explain.defined %]
-       <pre class="bz_query_explain">[% query_explain FILTER html %]</pre>
-     [% END %]
-

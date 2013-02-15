@@ -162,13 +162,17 @@ sub getDirDataFile {
     my %dbh;
 
     sub getDbh {
-        my ($subdir) = @_;
+        my ($subdir, $as_root) = @_;
 
-        my @localconfig = read_file("$HTDOCS_PATH/$subdir/localconfig");
         my %config;
+        my @localconfig = read_file("$HTDOCS_PATH/$subdir/localconfig");
         foreach my $line (@localconfig) {
             next unless $line =~ /^\s*\$db_([a-z]+)\s*=\s*'([^']+)'/;
             $config{$1} = $2;
+        }
+        if ($as_root) {
+            $config{user} = 'root';
+            $config{pass} = '';
         }
 
         my $name = $config{name};
