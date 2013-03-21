@@ -35,8 +35,8 @@ our $REPO_PATH                = '/opt/bugzilla/repo';
 our $YUI2_PATH                = '/opt/bugzilla/yui2';
 our $YUI3_PATH                = '/opt/bugzilla/yui3';
 
-our $DEFAULT_BMO_REPO         = 'bmo/4.0';
-our $DEFAULT_BMO_DB           = 'bugs_bmo_201301';
+our $DEFAULT_BMO_REPO         = 'bmo/4.2';
+our $DEFAULT_BMO_DB           = 'bugs_bmo_4_2';
 our $BUGZILLA_TRUNK_MILESTONE = '5.0';
 
 our $URL_BASE                 = 'http://fedora/';
@@ -48,13 +48,13 @@ our $MAIL_FROM                = 'bugzilla-daemon@glob.com.au';
 our $MAINTAINER               = 'byron@glob.com.au';
 
 our %LOCALCONFIG = (
+    'cvsbin' => '/usr/bin/cvs',
     'db_host' => 'mac',
+    'db_pass' => 'sockmonkey',
     'db_port' => '0',
     'db_user' => 'bugs',
-    'db_pass' => 'sockmonkey',
-    'cvsbin' => '/usr/bin/cvs',
-    'interdiffbin' => '/usr/bin/interdiff',
     'diffpath' => '/usr/bin',
+    'interdiffbin' => '/usr/bin/interdiff',
     'webservergroup' => 'byron',
 );
 
@@ -78,10 +78,11 @@ our %PARAMS = (
     user_info_class => 'CGI',
     usestatuswhiteboard => 1,
     usetargetmilestone => 1,
+    'webdotbase' => '/usr/bin/dot',
 );
 
 our %PARAMS_BMO = (
-    user_info_class => 'BrowserID,CGI',
+    user_info_class => 'Persona,CGI',
 );
 
 sub GROWL {
