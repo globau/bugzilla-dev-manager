@@ -64,6 +64,7 @@ if ($action eq 'new') {
     runChecksetup();
     popd();
     fixSubDir($subdir);
+    checkCurrentDatabase($subdir);
     info("$subdir created\n" . getDirSummary($subdir, 1));
     GROWL("$subdir created");
 
@@ -511,6 +512,15 @@ sub getCurrentDatabase {
     return "unknown";
 }
 
+sub checkCurrentDatabase {
+    my ($subdir) = @_;
+    my $dbh = getDbh($subdir);
+    my $count = $dbh->selectrow_array("SELECT count(*) FROM profiles WHERE disable_mail = 0");
+    if ($count > 5) {
+        warn(getCurrentDatabase($subdir) . " has $count users with bugmail enabled\n");
+    }
+}
+
 sub updateLocalConfig {
     my ($subdir, $database) = @_;
     $database ||= getCurrentDatabase($subdir);
@@ -567,17 +577,6 @@ sub applyLocalPatches {
         $short_file =~ s/^\Q$DATA_PATH\/patches\///;
         info("applying patch from $short_file");
         system "patch --forward --strip=0 --input=$file --reject-file=- --batch";
-    }
-
-    if (!-e "extensions/LimitedEmailEx"
-        && (!-e "extensions/LimitedEmail" || -e "extensions/LimitedEmail/disabled")
-    ) {
-        info("deploying limited-email extension");
-        symlink("$REPO_PATH/LimitedEmailEx", "$HTDOCS_PATH/$subdir/extensions/LimitedEmailEx")
-            or die $!;
-    } elsif (-e "extensions/LimitedEmailEx" && !-e "extensions/LimitedEmail/disabled") {
-        info("deleting limited-email extension");
-        unlink("$HTDOCS_PATH/$subdir/extensions/LimitedEmailEx");
     }
 
     popd();
@@ -809,19 +808,12 @@ sub getAnnounceHtml {
         : "<b>$subdir</b>";
     my $summary = CGI::escapeHTML(getDirSummary($subdir));
     my $url = $URL_BASE;
-    my $mail_warning = 
-        -e "$HTDOCS_PATH/$subdir/extensions/LimitedEmailEx" || !-e "$HTDOCS_PATH/$subdir/extensions/LimitedEmail/disabled"
-        ? ''
-        : qq(<img src="${url}mail_warning.png" width="16" height="16">&nbsp;<b>Mail unrestricted</b><br>);
     my $announcehtml = <<EOF;
 <div style="
 background: url(${url}bkg_warning.png) repeat-y scroll left top #fff9db;
 color: #666458;
 padding: 5px 5px 5px 19px;
-">
-$mail_warning
-$dev_name ($db) $summary
-</div>
+">$dev_name ($db) $summary</div>
 EOF
     $announcehtml =~ s/\n//g;
     return $announcehtml;
