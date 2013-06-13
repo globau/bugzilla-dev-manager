@@ -38,7 +38,7 @@ our $YUI2_PATH                = '/opt/bugzilla/yui2';
 our $YUI3_PATH                = '/opt/bugzilla/yui3';
 
 our $DEFAULT_BMO_REPO         = 'bmo/4.2';
-our $DEFAULT_BMO_DB           = 'bugs_bmo_4_2';
+our $DEFAULT_BMO_DB           = 'bugs_bmo_201304';
 our $BUGZILLA_TRUNK_MILESTONE = '5.0';
 
 our $URL_BASE                 = 'http://fedora/';
