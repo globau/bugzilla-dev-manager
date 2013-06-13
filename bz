@@ -1273,8 +1273,8 @@ sub showInfo {
 database: %s
  comment: %s
         ") . "\n",
-        $subdir,
-        getDirSummary($subdir) || '-',
+        coloured($subdir, 'green'),
+        coloured(getDirSummary($subdir) || '-', 'green'),
         getDirData($subdir, 'repo-version') || '-',
         $bzr_branch || '-',
         getCurrentDatabase($subdir),

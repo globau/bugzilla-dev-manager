@@ -26,6 +26,7 @@ BEGIN {
     @ISA = 'Exporter';
     @EXPORT = qw(
         initHandlers
+        coloured
         info dieInfo alert confirm prompt
         getBmoProxy soapErrChk
         dirToBugID
@@ -39,8 +40,8 @@ BEGIN {
 }
 
 sub initHandlers {
-    $SIG{__DIE__} = sub { die _coloured("@_", 'red') . "\n" };
-    $SIG{__WARN__} = sub { print _coloured("@_", 'yellow') . "\n" };
+    $SIG{__DIE__} = sub { die coloured("@_", 'red') . "\n" };
+    $SIG{__WARN__} = sub { print coloured("@_", 'yellow') . "\n" };
 }
 initHandlers();
 
@@ -48,7 +49,7 @@ my $USER_PATH = "~/.bz-dev";
 $USER_PATH =~ s{^~([^/]*)}{$1 ? (getpwnam($1))[7] : (getpwuid($<))[7]}e;
 mkdir($USER_PATH) unless -d $USER_PATH;
 
-sub _coloured {
+sub coloured {
     # $message, $colour
     if (-t STDOUT) {
         return colored(@_);
@@ -215,11 +216,11 @@ sub databaseExists {
 }
 
 sub info {
-    print STDERR _coloured("@_", 'green') . "\n";
+    print STDERR coloured("@_", 'green') . "\n";
 }
 
 sub alert {
-    print STDERR _coloured("@_", 'red') . "\n";
+    print STDERR coloured("@_", 'red') . "\n";
 }
 
 sub dieInfo {
@@ -236,7 +237,7 @@ sub prompt {
     $prompt = '?' unless $prompt;
     $prompt =~ s/\s+$//;
     $valid_re = qr/./ unless $valid_re;
-    print chr(7), _coloured("$prompt ", 'yellow');
+    print chr(7), coloured("$prompt ", 'yellow');
     my $start_time = (time);
     my $key;
     ReadMode(4);
