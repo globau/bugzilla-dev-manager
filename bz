@@ -158,6 +158,7 @@ if ($action eq 'new') {
         updateLocalConfig($subdir, $database);
         getDbh($subdir);
         fixParams($subdir);
+        checkCurrentDatabase($subdir);
     } else {
         info(sprintf("current database for %s is %s", $subdir, getCurrentDatabase($subdir)));
     }
@@ -992,6 +993,10 @@ sub disableBugmail {
     my ($subdir) = @_;
     my $dbh = getDbh($subdir);
     $dbh->do("UPDATE profiles SET disable_mail=1");
+    $dbh->do("UPDATE flagtypes SET cc_list=''");
+    if (@NEVER_DISABLE_BUGMAIL) {
+        $dbh->do("UPDATE profiles SET disable_mail=0 WHERE login_name IN ('" . join("','", @NEVER_DISABLE_BUGMAIL) . "')");
+    }
 }
 
 sub resetEmailQueue {
@@ -1695,7 +1700,7 @@ runs bugzilla's checksetup.pl
 
 =item B<bz> B<disable-bugmail>
 
-disables bugmail for all users
+disables bugmail for all users, and clears all flag CC lists
 
 =item B<bz> B<reset-email-queue>
 

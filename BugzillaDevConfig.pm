@@ -26,6 +26,8 @@ our @EXPORT = qw(
     %PARAMS
     %PARAMS_BMO
 
+    @NEVER_DISABLE_BUGMAIL
+
     GROWL
 );
 
@@ -83,6 +85,11 @@ our %PARAMS = (
 
 our %PARAMS_BMO = (
     user_info_class => 'Persona,CGI',
+);
+
+our @NEVER_DISABLE_BUGMAIL = qw(
+    glob@mozilla.com
+    byron.jones@gmail.com
 );
 
 sub GROWL {
