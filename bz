@@ -121,6 +121,7 @@ if ($action eq 'new') {
     my $subdir = getCurrentSubdir();
     my $quick = grep { $_ eq '-quick' } @ARGV;
     my $stdout = grep { $_ eq '-' or $_ eq '-stdout' } @ARGV;
+    my $ignore_whitespace = grep { $_ eq '-w' } @ARGV;
     @ARGV = grep { $_ !~ /^-/ } @ARGV;
     my $bug = shift || $subdir;
     my @files = @ARGV;
@@ -144,7 +145,7 @@ if ($action eq 'new') {
         runTests($subdir, 2, 4, 5, 6, 8, 9, 10, 11);
     }
     info("making patch");
-    diff($subdir, $bug, $stdout, @files);
+    diff($subdir, $bug, $stdout, $ignore_whitespace, @files);
 
 } elsif ($action eq 'db') {
     my $subdir = getCurrentSubdir();
@@ -729,7 +730,7 @@ sub getBugInfo {
 }
 
 sub diff {
-    my ($subdir, $bug, $stdout, @files) = @_;
+    my ($subdir, $bug, $stdout, $ignore_whitespace, @files) = @_;
     die "Not a branch: $HTDOCS_PATH/$subdir\n" unless -e "$HTDOCS_PATH/$subdir/.bzr";
     pushd("$HTDOCS_PATH/$subdir");
 
@@ -744,7 +745,8 @@ sub diff {
     }
 
     unfix($subdir);
-    my $patch = `bzr diff @files`;
+    my $command = "bzr diff " . ($ignore_whitespace ? "--diff-options -w " : '') . " @files";
+    my $patch = `$command`;
     my $filename;
     if ($bug eq '-' or $stdout) {
         print $patch;
@@ -1652,9 +1654,10 @@ download and apply a patch
 
 revert current patch, then download and apply a patch
 
-=item B<bz> B<diff> [-quick] [I<patch number>] [I<files>]
+=item B<bz> B<diff> [-quick] [-w] [I<patch number>] [I<files>]
 
-generate a diff against bzr; tests will be executed if I<-quick> is not specified
+generate a diff against bzr; tests will be executed if I<-quick> is not specified.
+passing I<-w> will ignore whitespaces
 
 =item B<bz> B<db> [I<database>]
 
