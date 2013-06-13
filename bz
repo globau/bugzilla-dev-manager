@@ -1002,7 +1002,7 @@ sub disableBugmail {
 sub resetEmailQueue {
     my ($subdir) = @_;
     my $dbh = getDbh($subdir);
-    $dbh->do("UPDATE ts_job SET run_after = insert_time");
+    $dbh->do("UPDATE ts_job SET grabbed_until = 0, insert_time = 0, run_after = 0");
 }
 
 sub resetPassword {
