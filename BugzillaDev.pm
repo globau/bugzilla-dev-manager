@@ -62,10 +62,9 @@ sub getBmoProxy {
     my $host = shift || 'bugzilla.mozilla.org';
     gethostbyname($host) || return;
 
-    my $cookie_jar = HTTP::Cookies->new(file => "$USER_PATH/cookies.txt", autosave => 1);
     my $proxy = XMLRPC::Lite->proxy(
         "https://$host/xmlrpc.cgi",
-        'cookie_jar' => $cookie_jar,
+        'cookie_jar' => HTTP::Cookies->new(),
     );
     my $response;
 
