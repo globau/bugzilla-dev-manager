@@ -1536,6 +1536,8 @@ sub runChecksetup {
 sub runTests {
     my ($subdir, @args) = @_;
     pushd("$HTDOCS_PATH/$subdir");
+    $Test::Harness::verbose = grep { $_ eq '-v' } @args;
+    @args = grep { !/^-/ } @args;
     my @tests;
     if (scalar @args) {
         foreach my $arg (@args) {
@@ -1551,6 +1553,8 @@ sub runTests {
 sub runXtTests {
     my ($subdir, @args) = @_;
     pushd("$HTDOCS_PATH/$subdir");
+    $Test::Harness::verbose = grep { $_ eq '-v' } @args;
+    @args = grep { !/^-/ } @args;
     my $dbh = getDbh($subdir);
     my ($bug_count) = $dbh->selectrow_array("SELECT COUNT(*) FROM bugs");
     if ($bug_count) {
