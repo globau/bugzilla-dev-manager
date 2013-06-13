@@ -1372,6 +1372,7 @@ sub yui {
     );
 
     $src = "$YUI3_PATH/build";
+    return unless -d $src;
     find(
         sub {
             my $filename = $File::Find::name;
