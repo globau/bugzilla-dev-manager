@@ -23,7 +23,9 @@ function cdb() {
         cd "$BZ_DOCS"
         return;
     fi
-    if [ -d "$BZ_DOCS/$1" ]; then
+    if [[ "$1" == */* ]]; then
+        cd "$BZ_REPO/$1"
+    elif [ -d "$BZ_DOCS/$1" ]; then
         cd "$BZ_DOCS/$1"
     else
         cd "$BZ_DOCS/`bz grep -n $@`"
