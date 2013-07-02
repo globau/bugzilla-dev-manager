@@ -145,7 +145,9 @@ if ($action eq 'new') {
         runTests($subdir, 2, 4, 5, 6, 8, 9, 10, 11);
     }
     info("making patch");
-    diff($subdir, $bug, $stdout, $ignore_whitespace, @files);
+    my $filename = diff($subdir, $bug, $stdout, $ignore_whitespace, @files);
+    info("checking patch");
+    checkForTailingWhitespace($subdir, $filename);
 
 } elsif ($action eq 'db') {
     my $subdir = getCurrentSubdir();
@@ -262,6 +264,7 @@ if ($action eq 'new') {
     my $subdir = getCurrentSubdir();
     info("running tests");
     checkForTabs($subdir);
+    checkForTailingWhitespace($subdir);
     runTests($subdir, @ARGV);
 
 } elsif ($action eq 'xt') {
@@ -759,6 +762,7 @@ sub diff {
     fixSubDir($subdir);
     info("$filename created") if $filename;
     popd();
+    return $filename;
 }
 
 sub fixParams {
@@ -1433,6 +1437,42 @@ sub checkForTabs {
         alert($filename);
     }
     die "\n";
+}
+
+sub checkForTailingWhitespace {
+    my ($subdir, $filename) = @_;
+
+    my @lines;
+    if ($filename) {
+        @lines = read_file("$HTDOCS_PATH/$subdir/$filename");
+    } else {
+        pushd("$HTDOCS_PATH/$subdir");
+        @lines = `bzr diff`;
+        popd();
+    }
+
+    my %errors;
+    my $hunk_file;
+    foreach my $line (@lines) {
+        next unless $line =~ /^\+/;
+        if ($line =~ /^\+\+\+ (\S+)/) {
+            $hunk_file = $1;
+            next;
+        }
+        chomp($line);
+        next unless $line =~ /\s+$/;
+        my $ra = $errors{$hunk_file} ||= [];
+        push @$ra, $line;
+    }
+    if (scalar keys %errors) {
+        alert("trailing whitespace added:");
+        foreach my $file (sort keys %errors) {
+            print "$file\n";
+            foreach my $line (@{ $errors{$file} }) {
+                print "  $line\n";
+            }
+        }
+    }
 }
 
 sub addBoilerPlates {
