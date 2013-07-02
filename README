@@ -24,35 +24,12 @@ INSTALL
 
 and other stuff i've probably missed :)
 
-i also have the following bash aliases:
-
-    function cdb() {
-        if [ -d "/opt/bugzilla/htdocs/$1" ]; then
-            cd "/opt/bugzilla/htdocs/$1"
-        else
-            cd "/opt/bugzilla/htdocs/`bz grep -n $@`"
-        fi
-        if [ -f "data/summary" ]; then
-            echo "[Bug ${PWD##*/}] `cat data/summary`" | perl -MTerm::ANSIColor -ne "print colored(\$_,'green')"
-        fi
-    }
-
-    function cdr() {
-        cd /opt/bugzilla/repo/$1
-    }
-
-    function bznew {
-        bz new $@
-        cd /opt/bugzilla/htdocs/$1
-    }
-
 LICENSE
 
 Any copyright is dedicated to the Public Domain.
 http://creativecommons.org/publicdomain/zero/1.0/
 
 SYNOPSIS
-
     bz new subdir repo database
         create a new instance
 
@@ -69,9 +46,10 @@ SYNOPSIS
     bz new-patch [patch number or url]
         revert current patch, then download and apply a patch
 
-    bz diff [-quick] [patch number] [files]
+    bz diff [-quick] [-w] [patch number]
+    [files]
         generate a diff against bzr; tests will be executed if -quick is not
-        specified
+        specified. passing -w will ignore whitespaces
 
     bz db [database]
         show or change the database
@@ -90,8 +68,9 @@ SYNOPSIS
     bz unfix
         reverts fixes applied by fix
 
-    bz grep query
-        search summarys for the specified query
+    bz grep [-n] query
+        search summarys for the specified query if -n is specified, just the
+        first matching bug number is printed
 
     bz test
         runs bugzilla's test suite
@@ -100,7 +79,11 @@ SYNOPSIS
         runs bugzilla's checksetup.pl
 
     bz disable-bugmail
-        disables bugmail for all users
+        disables bugmail for all users, and clears all flag CC lists
+
+    bz reset-email-queue
+        resets the run_after time for all queued bugmail, forcing them to be
+        processed at the next run.
 
     bz reset-password login
         resets the password for a login, without running all the checksetup
@@ -112,8 +95,18 @@ SYNOPSIS
     bz drop-cf field [field...]
         drops the custom field(s), removing from activity and bugs
 
+    bz export-schema filename
+        exports bugzilla's bz_schema defination to filename
+
+    bz import-schema filename
+        import bugzilla's bz_schema defination from filename only import files
+        exported by export-schema, unless you like breaking bugzilla
+
     bz mysql
         runs mysql client connecting to the bugzilla database
+
+    bz mysql-trace
+        toggles mysql query tracing
 
     bz yui-debug
         switches the yui libs to -debug version
