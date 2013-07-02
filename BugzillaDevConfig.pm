@@ -31,11 +31,12 @@ our @EXPORT = qw(
     GROWL
 );
 
-our $HTDOCS_PATH              = '/opt/bugzilla/htdocs';
-our $DATA_PATH                = '/opt/bugzilla/repo/git/bugzilla-dev-manager/data';
-our $REPO_PATH                = '/opt/bugzilla/repo';
-our $YUI2_PATH                = '/opt/bugzilla/yui2';
-our $YUI3_PATH                = '/opt/bugzilla/yui3';
+my  $ROOT_PATH                = '/home/byron/bugzilla';
+our $HTDOCS_PATH              = "$ROOT_PATH/htdocs";
+our $DATA_PATH                = "$ROOT_PATH/repo/git/bugzilla-dev-manager/data";
+our $REPO_PATH                = "$ROOT_PATH/repo";
+our $YUI2_PATH                = "$ROOT_PATH/yui2";
+our $YUI3_PATH                = "$ROOT_PATH/yui3";
 
 our $DEFAULT_BMO_REPO         = 'bmo/4.2';
 our $DEFAULT_BMO_DB           = 'bugs_bmo_201304';
