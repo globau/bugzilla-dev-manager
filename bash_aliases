@@ -12,6 +12,14 @@ function bznew {
 
 function cdb() {
     if [ -z "$1" ]; then
+        PWD=`pwd`
+        if [[ "$PWD" =~ ^$BZ_DOCS/ ]]; then
+            LEN=`expr length "$BZ_DOCS/"`
+            P=${PWD:$LEN}
+            IFS=/ A=( $P )
+            cd "$BZ_DOCS/${A[0]}"
+            return
+        fi;
         PWD=`pwd -P`
         if [[ "$PWD" =~ ^$BZ_DOCS/ ]]; then
             LEN=`expr length "$BZ_DOCS/"`
