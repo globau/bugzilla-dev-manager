@@ -38,6 +38,7 @@ if ($action eq 'new') {
         printf "Bug %s: %s\n", dirToBugID($subdir), $bug->{summary};
     }
 
+
     if (!scalar @ARGV) {
         unshift @ARGV, determineDefaultRepo($subdir);
     }
@@ -77,7 +78,8 @@ if ($action eq 'new') {
     if ($subdir) {
         my $patch = validatePatch(dirToBugID($subdir), @ARGV);
         info("patching $subdir with #$patch");
-        deploySubdirPatch($subdir, $patch);
+        my $filename = downloadPatch($subdir, $patch);
+        applyPatch($subdir, $filename);
     } elsif ($repo) {
         my $bugId = shift @ARGV
             or die "bug number required\n";
@@ -115,7 +117,13 @@ if ($action eq 'new') {
     }
 
     system "$0 fix";
-    deploySubdirPatch($subdir, $patch);
+    my $filename = downloadPatch($subdir, $patch);
+    applyPatch($subdir, $filename);
+
+} elsif ($action eq 'get-patch') {
+    my $subdir = getCurrentSubdir();
+    my $patch = validatePatch(dirToBugID($subdir), shift @ARGV, undef, 1);
+    downloadPatch($subdir, $patch);
 
 } elsif ($action eq 'diff') {
     my $subdir = getCurrentSubdir();
@@ -436,7 +444,7 @@ sub validateDatabase {
 }
 
 sub validatePatch {
-    my ($bug_id, $patch, $from_bug_id) = @_;
+    my ($bug_id, $patch, $from_bug_id, $all) = @_;
     $bug_id ||= '';
 
     if ($patch && $patch eq 'bug' && $from_bug_id) {
@@ -456,7 +464,7 @@ sub validatePatch {
         my @patches;
         foreach my $rh (@{$response->result->{bugs}->{$bug_id}}) {
             next unless $rh->{is_patch};
-            next if $rh->{is_obsolete};
+            next if $rh->{is_obsolete} && !$all;
             push @patches, $rh;
         }
         if (!scalar @patches) {
@@ -614,7 +622,7 @@ sub getLocalPatchFiles {
     return @files;
 }
 
-sub deploySubdirPatch {
+sub downloadPatch {
     my ($subdir, $patch) = @_;
 
     info("fetching patch $patch");
@@ -645,8 +653,8 @@ sub deploySubdirPatch {
     pushd("$HTDOCS_PATH/$subdir");
     info("creating $filename");
     write_file($filename, { binmode => ':raw' }, $content);
-    applyPatch($filename);
     popd();
+    return $filename;
 }
 
 sub deployRepoPatch {
@@ -683,14 +691,15 @@ sub deployRepoPatch {
     pushd($repodir);
     info("creating $filename");
     write_file($filename, { binmode => ':raw' }, $content);
-    applyPatch($filename);
+    applyPatch(undef, $filename);
     info("deleting $filename");
     unlink($filename);
     popd();
 }
 
 sub applyPatch {
-    my ($filename) = @_;
+    my ($subdir, $filename) = @_;
+    pushd("$HTDOCS_PATH/$subdir") if $subdir;
     my @patch = read_file($filename);
     open(PATCH, "|patch -p0");
     foreach my $line (@patch) {
@@ -703,6 +712,7 @@ sub applyPatch {
         print PATCH $line;
     }
     close(PATCH);
+    popd() if $subdir;
 }
 
 my %_bug_cache;
