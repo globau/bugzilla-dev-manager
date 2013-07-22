@@ -6,7 +6,7 @@ BZ_REPO=`perl -I"$BZ_ROOT" -MBugzillaDevConfig -e 'print \$REPO_PATH'`
 alias bz="$BZ_ROOT/bz"
 
 function bznew {
-    bz new $@
+    bz new "$@"
     cd "$BZ_DOCS/$1"
 }
 

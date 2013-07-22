@@ -422,6 +422,7 @@ sub validateRepo {
         }
     }
     die "failed to find repo/$repo\n" unless $found;
+    die "invalid repo '$repo'\n" unless -e "$REPO_PATH/$repo/checksetup.pl";
     return $repo;
 }
 
