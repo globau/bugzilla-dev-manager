@@ -587,8 +587,7 @@ sub applyLocalPatches {
     pushd("$HTDOCS_PATH/$subdir");
 
     foreach my $file (getLocalPatchFiles($subdir)) {
-        my $short_file = $file;
-        $short_file =~ s/^\Q$DATA_PATH\/patches\///;
+        (my $short_file = $file) =~ s/^\Q$DATA_PATH\/patches\///;
         info("applying patch from $short_file");
         system "patch --forward --strip=0 --input=$file --reject-file=- --batch";
     }
@@ -601,6 +600,8 @@ sub revertLocalPatches {
 
     pushd("$HTDOCS_PATH/$subdir");
     foreach my $file (getLocalPatchFiles($subdir)) {
+        (my $short_file = $file) =~ s/^\Q$DATA_PATH\/patches\///;
+        info("reverting patch from $short_file");
         system "patch --reverse --strip=0 --input=$file --reject-file=- --batch"
     }
 
