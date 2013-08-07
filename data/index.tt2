@@ -38,11 +38,15 @@ th {
     color: silver;
 }
 
-.dull {
+.delete {
     color: silver;
 }
 
-.black {
+.resolved {
+    text-decoration: line-through;
+}
+
+.resolved a {
     color: black;
 }
 
@@ -185,15 +189,11 @@ function delete_instance(dir) {
         </tr>
     [% END %]
     <tr id="tr_[% instance.dir FILTER html %]">
-        <td nowrap>
+        <td nowrap class="[% "resolved" IF instance.status == "RESOLVED" || instance.status == "VERIFIED" %]">
             <a href="[% instance.dir FILTER url %]/">[% instance.dir FILTER html %]</a>
         </td>
         <td>
-            <a href="#" class="
-                [%~ instance.status == "RESOLVED" || instance.status == "VERIFIED"
-                    ? "black"
-                    : "dull" ~%]
-            " onclick="return delete_instance('[% instance.dir FILTER js%]')">×</a>
+            <a href="#" class="delete" onclick="return delete_instance('[% instance.dir FILTER js%]')">×</a>
         </td>
       [% IF instance.id %]
         <td nowrap>
