@@ -1088,7 +1088,7 @@ sub dropTable {
 
     foreach my $table (@tables) {
         if (!exists $schema->{abstract_schema}->{$table}) {
-            die "failed to find table '$table' in bz_schema\n";
+            alert("failed to find table '$table' in bz_schema");
         }
     }
     foreach my $table (@tables) {
