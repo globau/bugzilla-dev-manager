@@ -1,0 +1,13 @@
+=== modified file 'mod_perl.pl'
+--- mod_perl.pl	2013-07-22 05:16:20 +0000
++++ mod_perl.pl	2013-07-24 07:07:12 +0000
+@@ -64,7 +64,7 @@
+ if (Bugzilla->params->{'urlbase'} eq 'https://bugzilla.mozilla.org/') {
+     Apache2::SizeLimit->set_max_unshared_size(500_000);
+ } else {
+-    Apache2::SizeLimit->set_max_unshared_size(250_000);
++    Apache2::SizeLimit->set_max_unshared_size(1_000_000);
+ }
+ 
+ my $cgi_path = Bugzilla::Constants::bz_locations()->{'cgi_path'};
+
