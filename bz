@@ -1110,10 +1110,11 @@ sub dropColumn {
     my @columns;
 
     foreach my $name (@names) {
-        if (scalar(split(/\./, $name)) != 2) {
+        my @items = split(/\./, $name);
+        if (scalar @items != 2) {
             die "invalid column '$name'; use table.column\n";
         }
-        my ($table, $column) = split(/\./, $name);
+        my ($table, $column) = @items;
         my ($exists) = $dbh->selectrow_array("
             SELECT 1
               FROM information_schema.columns
