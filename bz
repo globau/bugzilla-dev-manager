@@ -439,7 +439,9 @@ sub validateDatabase {
     die "missing database\n" unless $db;
     $db = lc $db;
     $db =~ s/[\.-\/]/_/g;
-    $db = "bugs_$db" unless $db =~ /^bugs_/;
+    if ($db ne 'bugs' && $db !~ /^bugs_/) {
+        $db = "bugs_$db";
+    }
     return $db;
 }
 
