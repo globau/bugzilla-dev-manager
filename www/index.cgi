@@ -105,7 +105,7 @@ sub get_instances {
         }
     }
 
-    return $instances if SKIP_BUG_INFO || !$proxy;
+    return $instances if SKIP_BUG_INFO || !$proxy || !@$instances;
 
     # read bug info
     my $response = $proxy->call(
