@@ -116,6 +116,7 @@ if ($action eq 'new') {
         }
     }
 
+    system "bzr up";
     system "$0 fix";
     my $filename = downloadPatch($subdir, $patch);
     applyPatch($subdir, $filename);
