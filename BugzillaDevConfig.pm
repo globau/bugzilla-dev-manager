@@ -86,6 +86,7 @@ our %PARAMS = (
 
 our %PARAMS_BMO = (
     user_info_class => 'Persona,CGI',
+    password_complexity => 'letters_numbers',
 );
 
 our @NEVER_DISABLE_BUGMAIL = qw(
