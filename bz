@@ -151,12 +151,13 @@ if ($action eq 'new') {
             exit unless confirm("continue?");
         }
         checkForTabs($subdir);
+        checkForUnknownFiles($subdir);
         runTests($subdir, 2, 4, 5, 6, 8, 9, 10, 11);
     }
     info("making patch");
     my $filename = diff($subdir, $bug, $stdout, $ignore_whitespace, @files);
     info("checking patch");
-    checkForTailingWhitespace($subdir, $filename);
+    checkForCommonMistakes($subdir, $filename);
 
 } elsif ($action eq 'db') {
     my $subdir = getCurrentSubdir();
@@ -273,7 +274,7 @@ if ($action eq 'new') {
     my $subdir = getCurrentSubdir();
     info("running tests");
     checkForTabs($subdir);
-    checkForTailingWhitespace($subdir);
+    checkForCommonMistakes($subdir);
     runTests($subdir, @ARGV);
 
 } elsif ($action eq 'xt') {
@@ -513,6 +514,7 @@ sub createSubDir {
     foreach my $file (glob("$HTDOCS_PATH/$subdir/*.patch")) {
         unlink $file;
     }
+    fixRepo("$HTDOCS_PATH/$subdir", 1);
     die "$HTDOCS_PATH/$subdir/checksetup.pl missing\n" unless -e "$HTDOCS_PATH/$subdir/checksetup.pl";
 }
 
@@ -802,7 +804,7 @@ sub fixParams {
         $PARAMS{cookiepath} = "/$subdir/";
         $PARAMS{cookiedomain} = '';
     }
-    
+
     $PARAMS{announcehtml} = getAnnounceHtml($subdir);
 
     my @file;
@@ -1455,7 +1457,37 @@ sub checkForTabs {
     die "\n";
 }
 
-sub checkForTailingWhitespace {
+sub checkForUnknownFiles {
+    my ($subdir) = @_;
+
+    my $root = "$HTDOCS_PATH/$subdir";
+    pushd($root);
+    my @lines = `bzr st`;
+    popd();
+    chomp(@lines);
+
+    my @unknown;
+    my $current;
+    foreach my $line (@lines) {
+        if ($line =~ /^([^:]+):/) {
+            $current = $1;
+        } elsif ($current eq 'unknown') {
+            $line =~ s/^\s+//;
+            next if $line =~ /\.patch$/;
+            push @unknown, $line;
+        }
+    }
+    return unless scalar @unknown;
+
+    alert('The following files are new but are missing from bzr:');
+    foreach my $filename (@unknown) {
+        $filename =~ s/^\Q$root\E\///;
+        alert($filename);
+    }
+    die "\n";
+}
+
+sub checkForCommonMistakes {
     my ($subdir, $filename) = @_;
 
     my @lines;
@@ -1467,7 +1499,8 @@ sub checkForTailingWhitespace {
         popd();
     }
 
-    my %errors;
+    my %whitespace;
+    my %xxx;
     my $hunk_file;
     foreach my $line (@lines) {
         next unless $line =~ /^\+/;
@@ -1476,15 +1509,29 @@ sub checkForTailingWhitespace {
             next;
         }
         chomp($line);
-        next unless $line =~ /\s+$/;
-        my $ra = $errors{$hunk_file} ||= [];
-        push @$ra, $line;
+        if ($line =~ /\s+$/) {
+            my $ra = $whitespace{$hunk_file} ||= [];
+            push @$ra, $line;
+        }
+        if ($line =~ /XXX/) {
+            my $ra = $xxx{$hunk_file} ||= [];
+            push @$ra, $line;
+        }
     }
-    if (scalar keys %errors) {
+    if (scalar keys %whitespace) {
         alert("trailing whitespace added:");
-        foreach my $file (sort keys %errors) {
+        foreach my $file (sort keys %whitespace) {
             print "$file\n";
-            foreach my $line (@{ $errors{$file} }) {
+            foreach my $line (@{ $whitespace{$file} }) {
+                print "  $line\n";
+            }
+        }
+    }
+    if (scalar keys %xxx) {
+        alert("line with XXX added:");
+        foreach my $file (sort keys %xxx) {
+            print "$file\n";
+            foreach my $line (@{ $xxx{$file} }) {
                 print "  $line\n";
             }
         }
