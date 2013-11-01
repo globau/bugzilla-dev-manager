@@ -30,7 +30,7 @@ Any copyright is dedicated to the Public Domain.
 http://creativecommons.org/publicdomain/zero/1.0/
 
 SYNOPSIS
-    bz new subdir repo database
+    bz new *subdir* *repo* *database*
         create a new instance
 
     bz info
@@ -39,20 +39,26 @@ SYNOPSIS
     bz list
         lists all instances
 
-    bz patch [attachment id] =item bz patch [attachment url] =item bz
-    patch bug [bug id]
+    bz patch [*attachment id*]
+    bz patch [*attachment url*]
+    bz patch bug [*bug id*]
         download and apply a patch
 
-    bz new-patch [patch number or url]
+    bz new-patch [*patch number or url*]
         revert current patch, then download and apply a patch
 
-    bz diff [-quick] [-w] [patch number]
-    [files]
-        generate a diff against bzr; tests will be executed if -quick is not
-        specified. passing -w will ignore whitespaces
+    bz get-patch [*patch number or url*]
+        download the specified patch
 
-    bz db [database]
+    bz diff [-quick] [-w] [*patch number*] [*files*]
+        generate a diff against bzr; tests will be executed if *-quick* is
+        not specified. passing *-w* will ignore whitespaces
+
+    bz db [*database*]
         show or change the database
+
+    bz create-db [*database*]
+        creates a new database with the correct utf8 settings
 
     bz fix
         various fixes to make the instance work (params, perms, etc)
@@ -60,20 +66,23 @@ SYNOPSIS
     bz fix-all
         runs fix on all instances
 
-    bz bp [file | -all]
-        prompts to add boiler plates to new files where it can't find one, or
-        to the specified file if you pass -all it will prompt for all files
-        under the cwd which are missing boiler plates
+    bz bp [*file* | -all]
+        prompts to add boiler plates to new files where it can't find one,
+        or to the specified file if you pass -all it will prompt for all
+        files under the cwd which are missing boiler plates
 
     bz unfix
         reverts fixes applied by fix
 
-    bz grep [-n] query
+    bz grep [-n] *query*
         search summarys for the specified query if -n is specified, just the
         first matching bug number is printed
 
-    bz test
+    bz test [*number*] [*-v*]
         runs bugzilla's test suite
+
+    bz xt
+        runs bugzilla's xt suite
 
     bz checksetup | cs
         runs bugzilla's checksetup.pl
@@ -82,25 +91,33 @@ SYNOPSIS
         disables bugmail for all users, and clears all flag CC lists
 
     bz reset-email-queue
+    bz reset-queue
         resets the run_after time for all queued bugmail, forcing them to be
-        processed at the next run.
+        processed at the next run
 
-    bz reset-password login
+    bz empty-email-queue
+    bz empty-queue
+        removes all queued bugmail
+
+    bz reset-password *login*
         resets the password for a login, without running all the checksetup
-        guff.
+        guff
 
-    bz drop-table table [table...]
+    bz drop-table *table* [*table*...]
         drops the table(s) from the schema and removes from bz_schema
 
-    bz drop-cf field [field...]
+    bz drop-column *table.column*
+        drops the column from the schema and removes from bz_schema
+
+    bz drop-cf *field* [*field*...]
         drops the custom field(s), removing from activity and bugs
 
-    bz export-schema filename
-        exports bugzilla's bz_schema defination to filename
+    bz export-schema *filename*
+        exports bugzilla's bz_schema defination to *filename*
 
-    bz import-schema filename
-        import bugzilla's bz_schema defination from filename only import files
-        exported by export-schema, unless you like breaking bugzilla
+    bz import-schema *filename*
+        import bugzilla's bz_schema defination from *filename* only import
+        files exported by export-schema, unless you like breaking bugzilla
 
     bz mysql
         runs mysql client connecting to the bugzilla database

@@ -201,6 +201,11 @@ if ($action eq 'new') {
     info("resetting email queue $subdir");
     resetEmailQueue($subdir);
 
+} elsif ($action eq 'empty-email-queue' || $action eq 'empty-queue') {
+    my $subdir = getCurrentSubdir();
+    info("emptying email queue $subdir");
+    emptyEmailQueue($subdir);
+
 } elsif ($action eq 'reset-password') {
     my $subdir = getCurrentSubdir();
     my $login = shift @ARGV
@@ -274,6 +279,7 @@ if ($action eq 'new') {
     my $subdir = getCurrentSubdir();
     info("running tests");
     checkForTabs($subdir);
+    checkForUnknownFiles($subdir);
     checkForCommonMistakes($subdir);
     runTests($subdir, @ARGV);
 
@@ -514,6 +520,9 @@ sub createSubDir {
     foreach my $file (glob("$HTDOCS_PATH/$subdir/*.patch")) {
         unlink $file;
     }
+    find(sub {
+        unlink($_) if /^\..+\.swp$/;
+    }, "$HTDOCS_PATH/$subdir");
     fixRepo("$HTDOCS_PATH/$subdir", 1);
     die "$HTDOCS_PATH/$subdir/checksetup.pl missing\n" unless -e "$HTDOCS_PATH/$subdir/checksetup.pl";
 }
@@ -1026,6 +1035,12 @@ sub resetEmailQueue {
     $dbh->do("UPDATE ts_job SET grabbed_until = 0, insert_time = 0, run_after = 0");
 }
 
+sub emptyEmailQueue {
+    my ($subdir) = @_;
+    my $dbh = getDbh($subdir);
+    $dbh->do("DELETE FROM ts_job");
+}
+
 sub resetPassword {
     my ($subdir, $login) = @_;
     pushd("$HTDOCS_PATH/$subdir");
@@ -1482,9 +1497,8 @@ sub checkForUnknownFiles {
     alert('The following files are new but are missing from bzr:');
     foreach my $filename (@unknown) {
         $filename =~ s/^\Q$root\E\///;
-        alert($filename);
+        info($filename);
     }
-    die "\n";
 }
 
 sub checkForCommonMistakes {
@@ -1758,7 +1772,9 @@ displays information about the current instance
 lists all instances
 
 =item B<bz> B<patch> [I<attachment id>]
+
 =item B<bz> B<patch> [I<attachment url>]
+
 =item B<bz> B<patch> B<bug> [I<bug id>]
 
 download and apply a patch
@@ -1766,6 +1782,10 @@ download and apply a patch
 =item B<bz> B<new-patch> [I<patch number or url>]
 
 revert current patch, then download and apply a patch
+
+=item B<bz> B<get-patch> [I<patch number or url>]
+
+download the specified patch
 
 =item B<bz> B<diff> [-quick] [-w] [I<patch number>] [I<files>]
 
@@ -1775,6 +1795,10 @@ passing I<-w> will ignore whitespaces
 =item B<bz> B<db> [I<database>]
 
 show or change the database
+
+=item B<bz> B<create-db> [I<database>]
+
+creates a new database with the correct utf8 settings
 
 =item B<bz> B<fix>
 
@@ -1798,9 +1822,13 @@ reverts fixes applied by B<fix>
 search summarys for the specified query
 if -n is specified, just the first matching bug number is printed
 
-=item B<bz> B<test>
+=item B<bz> B<test> [I<number>] [I<-v>]
 
 runs bugzilla's test suite
+
+=item B<bz> B<xt>
+
+runs bugzilla's xt suite
 
 =item B<bz> B<checksetup> | B<cs>
 
@@ -1812,15 +1840,27 @@ disables bugmail for all users, and clears all flag CC lists
 
 =item B<bz> B<reset-email-queue>
 
-resets the run_after time for all queued bugmail, forcing them to be processed at the next run.
+=item B<bz> B<reset-queue>
+
+resets the run_after time for all queued bugmail, forcing them to be processed at the next run
+
+=item B<bz> B<empty-email-queue>
+
+=item B<bz> B<empty-queue>
+
+removes all queued bugmail
 
 =item B<bz> B<reset-password> I<login>
 
-resets the password for a login, without running all the checksetup guff.
+resets the password for a login, without running all the checksetup guff
 
 =item B<bz> B<drop-table> I<table> [I<table>...]
 
 drops the table(s) from the schema and removes from bz_schema
+
+=item B<bz> B<drop-column> I<table.column>
+
+drops the column from the schema and removes from bz_schema
 
 =item B<bz> B<drop-cf> I<field> [I<field>...]
 
