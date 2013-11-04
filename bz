@@ -716,7 +716,14 @@ sub applyPatch {
     my ($subdir, $filename) = @_;
     pushd("$HTDOCS_PATH/$subdir") if $subdir;
     my @patch = read_file($filename);
-    open(PATCH, "|patch -p0");
+    my $p = 0;
+    foreach my $line (@patch) {
+        if ($line =~ /^diff --git a\//) {
+            $p = 1;
+            last;
+        }
+    }
+    open(PATCH, "|patch -p$p");
     foreach my $line (@patch) {
         # === renamed file 'extensions/BMO/web/js/choose_product.js' => 'extensions/BMO/web/js/prod_comp_search.js'
         if ($line =~ /^=== renamed file '([^']+)' => '([^']+)'/) {
