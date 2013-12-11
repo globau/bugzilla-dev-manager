@@ -39,13 +39,13 @@ our $YUI2_PATH                = "$ROOT_PATH/yui2";
 our $YUI3_PATH                = "$ROOT_PATH/yui3";
 
 our $DEFAULT_BMO_REPO         = 'bmo/4.2';
-our $DEFAULT_BMO_DB           = 'bugs_bmo_201304';
+our $DEFAULT_BMO_DB           = 'bugs_bmo_201312';
 our $BUGZILLA_TRUNK_MILESTONE = '5.0';
 
-our $URL_BASE                 = 'http://fedora/';
-our $ATTACH_BASE              = 'http://attach.fedora/';
-our $MODPERL_BASE             = 'http://modperl.fedora/';
-our $MODPERL_ATTACH_BASE      = 'http://attach.modperl.fedora/';
+our $URL_BASE                 = 'http://bz/';
+our $ATTACH_BASE              = 'http://attach.bz/';
+our $MODPERL_BASE             = 'http://modperl.bz/';
+our $MODPERL_ATTACH_BASE      = 'http://attach.modperl.bz/';
 
 our $MAIL_FROM                = 'bugzilla-daemon@glob.com.au';
 our $MAINTAINER               = 'byron@glob.com.au';
