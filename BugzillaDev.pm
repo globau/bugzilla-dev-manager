@@ -156,7 +156,6 @@ sub getDirDataFile {
     return if $name eq '' || $name =~ /(?:\.\.|\||\/|\~)/;
     return "$HTDOCS_PATH/$dir/data/$name";
 }
- 
 
 {
     my %dbh;
