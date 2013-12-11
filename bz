@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+$| = 1;
 
 #
 
@@ -595,33 +596,63 @@ EOF
     close FH;
 }
 
-sub applyLocalPatches {
-    my ($subdir) = @_;
-
+sub localPatches {
+    my ($subdir, $revert) = @_;
     pushd("$HTDOCS_PATH/$subdir");
+    my ($repo, $version) = split('-', getDirData($subdir, 'repo-version'));
+    my $mode = $revert ? 'revert' : 'apply';
 
-    foreach my $file (getLocalPatchFiles($subdir)) {
-        (my $short_file = $file) =~ s/^\Q$DATA_PATH\/patches\///;
-        info("applying patch from $short_file");
-        system "patch --forward --strip=0 --input=$file --reject-file=- --batch";
-    }
+    my $patches = [
+        {
+            desc    => '__DIE__ handler',
+            file    => 'Bugzilla.pm',
+            apply   => {
+                match   => sub { /^# ?\$::SIG{__DIE__} = i_am_cgi/ },
+                action  => sub { s/^#\s*// },
+            },
+            revert  => {
+                match   => sub { /^\$::SIG{__DIE__} = i_am_cgi/ },
+                action  => sub { s/^/#/ },
+            },
+        },
+        {
+            desc    => 't/012 warnings to errors',
+            file    => 't/012throwables.t',
+            apply   => {
+                match   => sub { /^\s+ok\(1, "--WARNING \$file has " \. scalar\(\@errors\)/ },
+                action  => sub { s/ok\(1,/ok\(0,/ },
+            },
+            revert  => {
+                match   => sub { /^\s+ok\(0, "--WARNING \$file has " \. scalar\(\@errors\)/ },
+                action  => sub { s/ok\(0,/ok\(1,/ },
+            },
+        },
+        {
+            desc    => 'mod_perl sizelimit',
+            file    => 'mod_perl.pl',
+            apply   => {
+                match   => sub { /^\s+Apache2::SizeLimit->set_max_unshared_size\(250_000\)/ },
+                action  => sub { s/\(250_000\)/(1_000_000)/ },
+            },
+            revert  => {
+                match   => sub { /^\s+Apache2::SizeLimit->set_max_unshared_size\(1_000_000\)/ },
+                action  => sub { s/\(1_000_000\)/(250_000)/ },
+            },
+        },
+    ];
 
-    popd();
-}
+    foreach my $patch (@$patches) {
+        my $match  = $patch->{$mode}->{match};
+        my $action = $patch->{$mode}->{action};
 
-sub revertLocalPatches {
-    my ($subdir) = @_;
+        my @file = read_file($patch->{file});
+        foreach (@file) {
+            next unless $match->();
+            print(($revert ? 'reverting' : 'applying') . " patch " . $patch->{desc} . "\n");
+            $action->();
+        }
 
-    pushd("$HTDOCS_PATH/$subdir");
-    foreach my $file (getLocalPatchFiles($subdir)) {
-        (my $short_file = $file) =~ s/^\Q$DATA_PATH\/patches\///;
-        info("reverting patch from $short_file");
-        system "patch --reverse --strip=0 --input=$file --reject-file=- --batch"
-    }
-
-    if (-e "extensions/LimitedEmailEx") {
-        info("deleting limited-email extension");
-        unlink("$HTDOCS_PATH/$subdir/extensions/LimitedEmailEx");
+        write_file($patch->{file}, @file);
     }
 
     popd();
@@ -629,9 +660,14 @@ sub revertLocalPatches {
 
 sub getLocalPatchFiles {
     my ($subdir) = @_;
+
+    my ($repo, $version) = split('-', getDirData($subdir, 'repo-version'));
+
     my @specs;
-    push @specs, "$DATA_PATH/patches/shared/*.patch";
-    push @specs, "$DATA_PATH/patches/" . getRepoBase($subdir) ."/*.patch";
+    push @specs, "$DATA_PATH/patches/any/any/*.patch";
+    push @specs, "$DATA_PATH/patches/any/$version/*.patch";
+    push @specs, "$DATA_PATH/patches/$repo/any/*.patch";
+    push @specs, "$DATA_PATH/patches/$repo/$version/*.patch";
     my @files;
     push @files, glob($_) foreach @specs;
     return @files;
@@ -967,7 +1003,7 @@ sub deleteCrud {
 
 sub fixSubDir {
     my ($subdir) = @_;
-    applyLocalPatches($subdir);
+    localPatches($subdir, 0);
     fixParams($subdir);
     fixHtAccess($subdir);
     fixPerms($subdir);
@@ -1084,7 +1120,7 @@ sub unfix {
     my ($subdir) = @_;
     revertHtAccess($subdir);
     fixAttributes($subdir);
-    revertLocalPatches($subdir);
+    localPatches($subdir, 1);
     yui($subdir, 'min');
     deleteCrud($subdir);
     fixParams($subdir);
@@ -1660,7 +1696,7 @@ sub runChecksetup {
 sub runTests {
     my ($subdir, @args) = @_;
     pushd("$HTDOCS_PATH/$subdir");
-    $Test::Harness::verbose = grep { $_ eq '-v' } @args;
+    $Test::Harness::verbose = (grep { $_ eq '-v' } @args) ? 1 : 0;
     @args = grep { !/^-/ } @args;
     my @tests;
     if (scalar @args) {
