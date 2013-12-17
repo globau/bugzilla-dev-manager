@@ -39,6 +39,9 @@ if ($action eq 'new') {
         printf "Bug %s: %s\n", dirToBugID($subdir), $bug->{summary};
     }
 
+    if (scalar(@ARGV) == 1 && $ARGV[0] eq 'bmo') {
+        @ARGV = ($DEFAULT_BMO_REPO, $DEFAULT_BMO_DB);
+    }
 
     if (!scalar @ARGV) {
         unshift @ARGV, determineDefaultRepo($subdir);
@@ -850,11 +853,10 @@ sub fixParams {
         $PARAMS{attachment_base} = $MODPERL_ATTACH_BASE;
         $PARAMS{cookiepath} = "/";
         $PARAMS{cookiedomain} = '';
-    } else {
-        $PARAMS{urlbase} = sprintf($PARAMS{urlbase}, $subdir);
-        $PARAMS{attachment_base} = sprintf($PARAMS{attachment_base}, $subdir);
-        $PARAMS{cookiepath} = "/$subdir/";
-        $PARAMS{cookiedomain} = '';
+    }
+
+    foreach my $name (keys %PARAMS) {
+        $PARAMS{$name} =~ s/%s/$subdir/g;
     }
 
     $PARAMS{announcehtml} = getAnnounceHtml($subdir);
@@ -1802,9 +1804,14 @@ bz - tool for manipulating bugzilla development instances.
 
 =over 4
 
-=item B<bz> B<new> I<subdir> I<repo> I<database>
+=item B<bz> B<new> I<subdir> [I<repo>] [I<database>]
 
-create a new instance
+=item B<bz> B<new> I<subdir> B<bmo>
+
+create a new instance.
+
+if not provided, the I<repo> and I<database> will be guessed from the bug
+number.  providing B<bmo> will use the default BMO repo and database.
 
 =item B<bz> B<info>
 
