@@ -3,6 +3,8 @@ package BugzillaDevConfig;
 use strict;
 use base 'Exporter';
 
+use File::Slurp;
+
 our @EXPORT = qw(
     $HTDOCS_PATH
     $DATA_PATH
@@ -28,7 +30,7 @@ our @EXPORT = qw(
 
     @NEVER_DISABLE_BUGMAIL
 
-    GROWL
+    notify_mac
 );
 
 my  $ROOT_PATH                = '/home/byron/bugzilla';
@@ -96,9 +98,46 @@ our @NEVER_DISABLE_BUGMAIL = qw(
     byron.jones@gmail.com
 );
 
-sub GROWL {
+sub notify_mac {
     my $message = shift;
-    system "ssh byron\@mac 'echo \"$message\"|/usr/local/bin/growlnotify'";
+
+    my @title = split /\000/, read_file('/proc/self/cmdline');
+    shift @title;     # perl
+    $title[0] = 'bz'; # script
+    my $title = join(' ', @title);
+
+    # growl
+=cut
+    system(
+        'ssh',
+        'byron@mac',
+        join(
+            ' ',
+            (
+                'echo',
+                sprintf('"(%s) %s"', $title, $message),
+                '|',
+                '/usr/local/bin/growlnotify',
+            )
+        )
+    );
+=cut
+
+    # terminal-notifier
+    system(
+        'ssh',
+        'byron@mac',
+        join(
+            ' ',
+            (
+                '/usr/local/bin/terminal-notifier',
+                '-sound Pop',
+                '-activate com.googlecode.iterm2',
+                '-title "' . $title . '"',
+                '-message "' . $message . '"',
+            )
+        )
+    );
 }
 
 1;

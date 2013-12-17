@@ -71,7 +71,7 @@ if ($action eq 'new') {
     fixSubDir($subdir);
     checkCurrentDatabase($subdir);
     info("$subdir created\n" . getDirSummary($subdir, 1));
-    GROWL("$subdir created");
+    notify_mac("$subdir created");
 
 } elsif ($action eq 'patch') {
     my ($subdir, $repo);

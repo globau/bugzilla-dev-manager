@@ -247,7 +247,7 @@ sub prompt {
                 shift @message;     # perl
                 $message[0] = 'bz'; # script
                 my $message = join(' ', @message);
-                GROWL("($message) needs your attention");
+                notify_mac("needs your attention");
                 $start_time = (time);
             }
             usleep(250);
