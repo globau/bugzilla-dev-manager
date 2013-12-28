@@ -1703,11 +1703,13 @@ sub runTests {
     my @tests;
     if (scalar @args) {
         foreach my $arg (@args) {
-            push @tests, glob("t/*$arg*.t");
+            $arg = sprintf("%03d", $arg);
+            push @tests, glob("t/$arg*.t");
         }
     } else {
         push @tests, glob("t/*.t");
     }
+
     runtests(@tests);
     popd();
 }
