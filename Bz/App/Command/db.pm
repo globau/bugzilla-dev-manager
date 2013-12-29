@@ -19,8 +19,7 @@ EOF
 sub execute {
     my ($self, $opt, $args) = @_;
 
-    my $workdir = Bz->current_workdir
-        or die "invalid working directory\n";
+    my $workdir = Bz->current_workdir;
 
     if (my $db = shift(@$args)) {
         my $current_db = $workdir->db;

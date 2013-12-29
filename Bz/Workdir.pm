@@ -11,6 +11,7 @@ use File::Copy::Recursive 'dircopy';
 use File::Find;
 use File::Slurp;
 use Safe;
+use Test::Harness qw(&runtests);
 
 has dir         => ( is => 'ro', required => 1 );
 has path        => ( is => 'lazy' );
@@ -21,6 +22,9 @@ has repo        => ( is => 'rw', lazy => 1, coerce => \&_coerce_repo, isa => \&_
 has repo_base   => ( is => 'lazy' );
 has db          => ( is => 'rw', lazy => 1, coerce => \&_coerce_db, builder => 1 );
 has dbh         => ( is => 'lazy' );
+
+use constant APPLY  => 0;
+use constant REVERT => 1;
 
 sub BUILD {
     my ($self, $args) = @_;
@@ -212,9 +216,16 @@ sub run_checksetup {
 
 sub fix {
     my ($self) = @_;
-    $self->local_patches(0);
+    $self->local_patches(APPLY);
     $self->fix_params();
     $self->fix_permissions();
+    $self->delete_crud();
+}
+
+sub unfix {
+    my ($self) = @_;
+    $self->local_patches(REVERT);
+    $self->revert_permissions();
     $self->delete_crud();
 }
 
@@ -285,7 +296,7 @@ sub local_patches {
             next unless $match->();
             print(($revert ? 'reverting' : 'applying') . " patch " . $patch->{desc} . "\n");
             $action->();
-            write_file($patch->{file}, @_);
+            write_file($patch->{file}, $_);
         } else {
             my @file = read_file($patch->{file});
             foreach (@file) {
@@ -378,11 +389,23 @@ sub fix_permissions {
         chomp $file;
         next if $file =~ /\.(cgi|pl|swp)$/;
         next if $file =~ /^\.\/contrib\//;
-        info("fixing permissions for $file");
+        message("fixing permissions for $file");
         $file = '"' . $file . '"' if $file =~ / /;
         sudo_on_output("chmod -x $file");
     }
+}
 
+sub revert_permissions {
+    my ($self) = @_;
+
+    chdir($self->path);
+    foreach my $line (`bzr diff`) {
+        next unless $line =~ /modified file '([^']+)' \(properties changed: ([+-]x) to [+-]x\)/;
+        my ($file, $perm) = ($1, $2);
+        message("fixing properties for $file");
+        $file = '"' . $file . '"' if $file =~ / /;
+        sudo_on_output("chmod $perm $file");
+    }
 }
 
 sub delete_crud {
@@ -436,8 +459,165 @@ sub sudo_on_output {
     my ($command) = @_;
     my $output = `$command 2>&1`;
     if ($output) {
-        info("escalating $command");
+        message("escalating $command");
         system "sudo $command";
+    }
+}
+
+sub added_files {
+    my ($self) = @_;
+
+    chdir($self->path);
+    my $in_added = 0;
+    my @added_files;
+    foreach my $line (`bzr st`) {
+        chomp $line;
+        if ($line =~ /^  (.+)/) {
+            my $file = $1;
+            next if $file =~ /\@$/;
+            push @added_files, $file if $in_added && !-d $file;
+        } else {
+            $in_added = $line eq 'added:';
+        }
+    }
+    return @added_files;
+}
+
+sub run_tests {
+    my ($self, $opts, @tests) = @_;
+
+    chdir($self->path);
+    $self->check_for_tabs();
+    $self->check_for_unknown_files();
+    $self->check_for_common_mistakes();
+    $self->_run_tests($opts, @tests);
+}
+
+sub _run_tests {
+    my ($self, $opts, @tests) = @_;
+
+    my @test_files;
+    if (@tests) {
+        foreach my $number (@tests) {
+            $number = sprintf("%03d", $number);
+            push @test_files, glob("t/$number*.t");
+        }
+    } else {
+        push @test_files, glob("t/*.t");
+    }
+    $Test::Harness::verbose = $opts->verbose if $opts;
+    runtests(@test_files);
+}
+
+sub check_for_tabs {
+    my ($self) = @_;
+
+    my $root = $self->path,
+    my @invalid;
+    my @ignore = qw(
+        js/change-columns.js
+        t/002goodperl.t
+    );
+    find(sub {
+            my $file = $File::Find::name;
+            return if -d $file;
+            return unless -T $file;
+            return if $file =~ /^\Q$root\E\/(\.bzr|contrib|data|js\/yui\d?|docs)\//;
+            return if $file =~ /\.patch$/;
+            my $filename = $file;
+            $filename =~ s/^\Q$root\E\///;
+            return if grep { $_ eq $filename } @ignore;
+            my $content = read_file($file);
+            return unless $content =~ /\t/;
+            push @invalid, $file;
+        },
+        $root
+    );
+
+    return unless @invalid;
+    alert('The following files contain tabs:');
+    foreach my $filename (@invalid) {
+        $filename =~ s/^\Q$root\E\///;
+        alert($filename);
+    }
+    die "\n";
+}
+
+sub check_for_unknown_files {
+    my ($self) = @_;
+
+    chdir($self->path);
+    my @lines = `bzr st`;
+    chomp(@lines);
+
+    my @unknown;
+    my $current;
+    foreach my $line (@lines) {
+        if ($line =~ /^([^:]+):/) {
+            $current = $1;
+        } elsif ($current eq 'unknown') {
+            $line =~ s/^\s+//;
+            next if $line =~ /\.patch$/;
+            push @unknown, $line;
+        }
+    }
+    return unless @unknown;
+
+    alert('The following files are new but are missing from bzr:');
+    my $root = quotemeta($self->path);
+    foreach my $filename (@unknown) {
+        $filename =~ s/^$root\///o;
+        info($filename);
+    }
+}
+
+sub check_for_common_mistakes {
+    my ($self, $filename) = @_;
+
+    chdir($self->path);
+    my @lines;
+    if ($filename) {
+        @lines = read_file($filename);
+    } else {
+        @lines = `bzr diff`;
+    }
+
+    my %whitespace;
+    my %xxx;
+    my $hunk_file;
+    foreach my $line (@lines) {
+        next unless $line =~ /^\+/;
+        if ($line =~ /^\+\+\+ (\S+)/) {
+            $hunk_file = $1;
+            next;
+        }
+        chomp($line);
+        if ($line =~ /\s+$/) {
+            my $ra = $whitespace{$hunk_file} ||= [];
+            push @$ra, $line;
+        }
+        if ($line =~ /XXX/) {
+            my $ra = $xxx{$hunk_file} ||= [];
+            push @$ra, $line;
+        }
+    }
+    if (scalar keys %whitespace) {
+        alert("trailing whitespace added:");
+        foreach my $file (sort keys %whitespace) {
+            info($file);
+            foreach my $line (@{ $whitespace{$file} }) {
+                info("  $line");
+            }
+        }
+    }
+    if (scalar keys %xxx) {
+        alert("line with XXX added:");
+        foreach my $file (sort keys %xxx) {
+            info($file);
+            foreach my $line (@{ $xxx{$file} }) {
+                info("   $line");
+            }
+        }
     }
 }
 

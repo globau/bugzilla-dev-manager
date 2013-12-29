@@ -6,6 +6,7 @@ our @EXPORT = qw(
     message
     info
     dieInfo
+    warning
     alert
 
     confirm
@@ -35,6 +36,10 @@ sub message {
 
 sub info {
     print STDERR coloured("@_", 'green') . "\n";
+}
+
+sub warning {
+    print STDERR coloured("@_", 'blue') . "\n";
 }
 
 sub alert {

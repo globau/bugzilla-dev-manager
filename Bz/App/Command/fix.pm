@@ -15,7 +15,7 @@ EOF
 sub execute {
     my ($self, $opt, $args) = @_;
 
-    if (my $workdir = Bz->current_workdir) {
+    if (my $workdir = eval { Bz->current_workdir }) {
         info("fixing instance " . $workdir->dir);
         $workdir->fix();
         return;
