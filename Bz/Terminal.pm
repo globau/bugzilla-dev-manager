@@ -16,6 +16,7 @@ our @EXPORT = qw(
 
     notify
 
+    coloured
     die_coloured
     warn_coloured
 );

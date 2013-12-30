@@ -20,6 +20,7 @@ has bug_id      => ( is => 'lazy' );
 has bug         => ( is => 'lazy' );
 has repo        => ( is => 'rw', lazy => 1, coerce => \&_coerce_repo, isa => \&_isa_repo, builder => 1 );
 has repo_base   => ( is => 'lazy' );
+has bzr_branch  => ( is => 'lazy' );
 has db          => ( is => 'rw', lazy => 1, coerce => \&_coerce_db, builder => 1 );
 has dbh         => ( is => 'lazy' );
 
@@ -113,6 +114,18 @@ sub _build_repo {
 sub _build_repo_base {
     my ($self) = @_;
     return (split('/', $self->repo))[0];
+}
+
+sub _build_bzr_branch {
+    my ($self) = @_;
+
+    my $bzr_branch = '';
+    my $filename = $self->path . "/.bzr/branch/branch.conf";
+    if (-e $filename) {
+        my $conf = read_file($filename);
+        ($bzr_branch) = $conf =~ /bound_location\s*=\s*(.+)\n/;
+    }
+    return $bzr_branch;
 }
 
 sub _coerce_db {
