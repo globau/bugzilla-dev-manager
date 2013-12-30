@@ -1,13 +1,6 @@
 package Bz::App::Command::disable_bugmail;
-use Bz::App -command;
+use parent 'Bz::App::Base';
 use Bz;
-
-sub command_names {
-    qw(
-        disable_bugmail
-        disable-bugmail
-    );
-}
 
 sub abstract {
     return "disable bugmail for most accounts";

@@ -1,5 +1,5 @@
 package Bz::App::Command::diff;
-use Bz::App -command;
+use parent 'Bz::App::Base';
 use Bz;
 
 use File::Slurp;

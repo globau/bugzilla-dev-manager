@@ -1,15 +1,10 @@
 package Bz::App::Command::reset_queue;
-use Bz::App -command;
+use parent 'Bz::App::Base';
 use Bz;
 
-sub command_names {
-    qw(
-        reset_queue
-        reset-queue
-        reset_email_queue
-        reset-email-queue
-    );
-}
+use constant ALIASES => qw(
+    reset_email_queue
+);
 
 sub abstract {
     return "resets the backoff for email, to force email to be sent on the next run";

@@ -1,5 +1,5 @@
 package Bz::App::Command::db;
-use Bz::App -command;
+use parent 'Bz::App::Base';
 use Bz;
 
 sub abstract {

@@ -1,5 +1,5 @@
 package Bz::App::Command::new;
-use Bz::App -command;
+use parent 'Bz::App::Base';
 use Bz;
 
 use Bz::Bug;

@@ -1,15 +1,10 @@
 package Bz::App::Command::empty_queue;
-use Bz::App -command;
+use parent 'Bz::App::Base';
 use Bz;
 
-sub command_names {
-    qw(
-        empty_queue
-        empty-queue
-        empty_email_queue
-        empty-email-queue
-    );
-}
+use constant ALIASES => qw(
+    emtpy_email_queue
+);
 
 sub abstract {
     return "deletes all emails from the email queue";
