@@ -33,16 +33,41 @@ sub _build__authenticated {
 sub bug {
     my ($self, $args) = @_;
     die "missing id" unless $args->{id};
-    message("looking up bug $args->{id}");
 
     my $response = $self->_rpc(
         'Bug.get',
         {
             ids => [ $args->{id} ],
-            include_fields => $args->{fields}
+            include_fields => $args->{fields},
         }
     );
     return $response->{bugs}->[0];
+}
+
+sub attachments {
+    my ($self, $bug_id) = @_;
+    die "missing bug_id" unless $bug_id;
+    return $self->_rpc(
+        'Bug.attachments',
+        {
+            ids => [ $bug_id ],
+            exclude_fields => [ 'data' ],
+        }
+    )->{bugs}->{$bug_id};
+}
+
+sub attachment {
+    my ($self, $attach_id) = @_;
+    die "missing attach_id" unless $attach_id;
+    my $attachments = $self->_rpc(
+        'Bug.attachments',
+        {
+            attachment_ids => [ $attach_id ],
+        }
+    );
+    return $attachments->{attachments}->{$attach_id}
+        || die "failed to get attachment $attach_id information\n"
+
 }
 
 sub _rpc {

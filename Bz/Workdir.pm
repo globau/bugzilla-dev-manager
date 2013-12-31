@@ -28,7 +28,7 @@ has dbh         => ( is => 'lazy' );
 sub BUILD {
     my ($self, $args) = @_;
     return if $args->{ignore_error};
-    die "invalid directory '" . $self->dir . "'\n"
+    die "unvalid directory '" . $self->dir . "'\n"
         unless -e $self->path . '/localconfig';
 }
 
@@ -550,6 +550,60 @@ sub check_for_common_mistakes {
             }
         }
     }
+}
+
+sub download_patch {
+    my ($self, $attach_id) = @_;
+    message("fetching attachment #$attach_id");
+
+    my $attachment = Bz->bugzilla->attachment($attach_id);
+    message(sprintf("Bug %s: %s\n", $attachment->{bug_id}, $attachment->{description} || $attachment->{summary}));
+    die "attachment is not a patch\n" unless $attachment->{is_patch} == '1';
+    if ($attachment->{is_obsolete} == '1') {
+        return unless confirm('attachment is obsolete, continue?');
+    }
+
+    my $bug_id = $attachment->{bug_id};
+    my $filename = "$bug_id-$attach_id.patch";
+    my $content = $attachment->{data};
+    $content =~ s/\015\012/\012/g;
+
+    if ($self->bug_id && $self->bug_id != $bug_id) {
+        my $summary = Bz::Bug->new({ id => $bug_id })->summary;
+        exit unless confirm("the patch from a different bug:\nBug $bug_id: $summary\ncontinue?");
+    }
+
+    chdir($self->path);
+    info("creating $filename");
+    write_file($filename, { binmode => ':raw' }, $content);
+    return $filename;
+}
+
+sub apply_patch {
+    my ($self, $filename) = @_;
+
+    chdir($self->path);
+    my @patch = read_file($filename);
+
+    my $p = 0;
+    foreach my $line (@patch) {
+        if ($line =~ /^diff --git a\//) {
+            $p = 1;
+            last;
+        }
+    }
+
+    open(my $patch, "|patch -p$p");
+    foreach my $line (@patch) {
+        # === renamed file 'extensions/BMO/web/js/choose_product.js' => 'extensions/BMO/web/js/prod_comp_search.js'
+        if ($line =~ /^=== renamed file '([^']+)' => '([^']+)'/) {
+            print "renamed '$1' => '$2'\n";
+            rename($1, $2);
+            next;
+        }
+        print $patch $line;
+    }
+    close($patch);
 }
 
 1;
