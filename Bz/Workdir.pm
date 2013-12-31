@@ -3,6 +3,7 @@ use Bz;
 use Moo;
 
 use Bz::Bug;
+use Bz::LocalPatches;
 use Bz::Repo;
 use CGI;
 use Data::Dumper;
@@ -23,9 +24,6 @@ has repo_base   => ( is => 'lazy' );
 has bzr_branch  => ( is => 'lazy' );
 has db          => ( is => 'rw', lazy => 1, coerce => \&_coerce_db, builder => 1 );
 has dbh         => ( is => 'lazy' );
-
-use constant APPLY  => 0;
-use constant REVERT => 1;
 
 sub BUILD {
     my ($self, $args) = @_;
@@ -229,7 +227,7 @@ sub run_checksetup {
 
 sub fix {
     my ($self) = @_;
-    $self->local_patches(APPLY);
+    Bz::LocalPatches->apply($self);
     $self->fix_params();
     $self->fix_permissions();
     $self->delete_crud();
@@ -237,89 +235,9 @@ sub fix {
 
 sub unfix {
     my ($self) = @_;
-    $self->local_patches(REVERT);
+    Bz::LocalPatches->revert($self);
     $self->revert_permissions();
     $self->delete_crud();
-}
-
-sub local_patches {
-    my ($self, $revert) = @_;
-    my $mode = $revert ? 'revert' : 'apply';
-
-    my $dir = $self->dir;
-    my $patches = [
-        {
-            desc    => '__DIE__ handler',
-            file    => 'Bugzilla.pm',
-            apply   => {
-                match   => sub { /^# ?\$::SIG{__DIE__} = i_am_cgi/ },
-                action  => sub { s/^#\s*// },
-            },
-            revert  => {
-                match   => sub { /^\$::SIG{__DIE__} = i_am_cgi/ },
-                action  => sub { s/^/#/ },
-            },
-        },
-        {
-            desc    => 't/012 warnings to errors',
-            file    => 't/012throwables.t',
-            apply   => {
-                match   => sub { /^\s+ok\(1, "--WARNING \$file has " \. scalar\(\@errors\)/ },
-                action  => sub { s/ok\(1,/ok\(0,/ },
-            },
-            revert  => {
-                match   => sub { /^\s+ok\(0, "--WARNING \$file has " \. scalar\(\@errors\)/ },
-                action  => sub { s/ok\(0,/ok\(1,/ },
-            },
-        },
-        {
-            desc    => 'mod_perl sizelimit',
-            file    => 'mod_perl.pl',
-            apply   => {
-                match   => sub { /^\s+Apache2::SizeLimit->set_max_unshared_size\(250_000\)/ },
-                action  => sub { s/\(250_000\)/(1_000_000)/ },
-            },
-            revert  => {
-                match   => sub { /^\s+Apache2::SizeLimit->set_max_unshared_size\(1_000_000\)/ },
-                action  => sub { s/\(1_000_000\)/(250_000)/ },
-            },
-        },
-        {
-            desc    => '.htaccess',
-            file    => '.htaccess',
-            whole   => 1,
-            apply   => {
-                match   => sub { /\n\s*RewriteEngine On\n(?!\s*RewriteBase)/ },
-                action  => sub { s/(\n(\s*)RewriteEngine On\n)/$1$2RewriteBase \/$dir\/\n/ },
-            },
-            revert   => {
-                match   => sub { /\n\s*RewriteEngine On\n\s*RewriteBase/ },
-                action  => sub { s/(\n\s*RewriteEngine On)\n\s*RewriteBase [^\n]+/$1/ },
-            },
-        },
-    ];
-
-    chdir($self->path);
-    foreach my $patch (@$patches) {
-        my $match  = $patch->{$mode}->{match};
-        my $action = $patch->{$mode}->{action};
-
-        if ($patch->{whole}) {
-            $_ = read_file($patch->{file});
-            next unless $match->();
-            print(($revert ? 'reverting' : 'applying') . " patch " . $patch->{desc} . "\n");
-            $action->();
-            write_file($patch->{file}, $_);
-        } else {
-            my @file = read_file($patch->{file});
-            foreach (@file) {
-                next unless $match->();
-                print(($revert ? 'reverting' : 'applying') . " patch " . $patch->{desc} . "\n");
-                $action->();
-            }
-            write_file($patch->{file}, @file);
-        }
-    }
 }
 
 sub fix_params {
