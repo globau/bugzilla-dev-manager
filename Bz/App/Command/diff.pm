@@ -29,7 +29,7 @@ EOF
 sub execute {
     my ($self, $opt, $args) = @_;
     my $workdir = Bz->current_workdir;
-    my $util = Bz->util;
+    my $boiler_plate = Bz->boiler_plate;
 
     info("creating patch");
     chdir($workdir->path);
@@ -37,7 +37,7 @@ sub execute {
     if (!$opt->quick) {
         my @missing;
         foreach my $file (grep { -T $_ } $workdir->added_files()) {
-            push @missing, $file unless $util->boiler_plate_exists($file);
+            push @missing, $file unless $boiler_plate->exists($file);
         }
         if (@missing) {
             foreach my $file (@missing) {

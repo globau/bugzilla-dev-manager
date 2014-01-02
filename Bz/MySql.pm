@@ -4,8 +4,6 @@ use Moo;
 
 use DBI;
 
-has _nothing => ( is => 'lazy' );
-
 sub dbh {
     my ($class, $name, $args) = @_;
     my $config = Bz->config;

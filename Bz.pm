@@ -51,10 +51,10 @@ sub mysql {
     return $_mysql ||= Bz::MySql->new();
 }
 
-my $_util;
-sub util {
-    require Bz::Util;
-    return $_util ||= Bz::Util->new();
+my $_boiler_plate;
+sub boiler_plate {
+    require Bz::BoilerPlate;
+    return $_boiler_plate ||= Bz::BoilerPlate->new();
 }
 
 #
