@@ -1,7 +1,7 @@
 
 BZ_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BZ_DOCS=`perl -I"$BZ_ROOT" -MBugzillaDevConfig -e 'print \$HTDOCS_PATH'`
-BZ_REPO=`perl -I"$BZ_ROOT" -MBugzillaDevConfig -e 'print \$REPO_PATH'`
+BZ_DOCS=`perl -I"$BZ_ROOT" -MBz -e 'print Bz->config->htdocs_path'`
+BZ_REPO=`perl -I"$BZ_ROOT" -MBz -e 'print Bz->config->repo_path'`
 
 alias bz="$BZ_ROOT/bz"
 
