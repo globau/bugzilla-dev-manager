@@ -3,9 +3,10 @@ use strict;
 use warnings;
 use autodie;
 
-use Bz::Terminal;
+use Bz::Util;
 use Cwd 'abs_path';
 use Data::Dumper;
+use File::Spec;
 
 BEGIN {
     $Data::Dumper::Sortkeys = 1;
@@ -14,10 +15,10 @@ BEGIN {
         # urgh
         $message =~ s/^(?:isa check|coercion) for "[^"]+" failed: //;
         $message =~ s/\n+$//;
-        die Bz::Terminal::die_coloured($message) . "\n";
+        die Bz::Util::die_coloured($message) . "\n";
     };
     $SIG{__WARN__} = sub {
-        print Bz::Terminal::warn_coloured(@_);
+        print Bz::Util::warn_coloured(@_);
     };
 }
 
@@ -27,9 +28,9 @@ sub import {
     warnings->import(FATAL => 'all');
     autodie->import();
 
-    # re-export Bz::Terminal exports, and Data::Dumper
+    # re-export Bz::Util exports, and Data::Dumper
     my $dest_pkg = caller();
-    eval "package $dest_pkg; Bz::Terminal->import(); Data::Dumper->import()";
+    eval "package $dest_pkg; Bz::Util->import(); Data::Dumper->import()";
 }
 
 my $_config;
@@ -60,11 +61,22 @@ sub util {
 
 sub current_workdir {
     require Bz::Workdir;
-    my $dir = abs_path('.') . '/';
+    my $path = abs_path('.') . '/';
     die "invalid working directory\n"
-        unless $dir =~ m#/htdocs/([^/]+)/#;
-    $dir = $1;
-    return Bz::Workdir->new({ dir => $dir });
+        unless $path =~ m#/htdocs/([^/]+)/#;
+    return Bz::Workdir->new({ dir => $1 });
+}
+
+sub current_repo {
+    require Bz::Repo;
+    my $path = abs_path('.');
+    while (!-d "$path/.bzr") {
+        my @dirs = File::Spec->splitdir($path);
+        pop @dirs;
+        $path = File::Spec->catdir(@dirs);
+        die "invalid working directory\n" if $path eq '/';
+    }
+    return Bz::Repo->new({ path => $path });
 }
 
 1;

@@ -14,7 +14,7 @@ sub execute {
     push @info, [ 'subdir',     coloured($workdir->dir, 'green') ];
     push @info, [ 'summary',    coloured($workdir->summary || '-', 'green') ];
     push @info, [ 'repo',       $workdir->repo ];
-    push @info, [ 'bzr',        $workdir->bzr_branch ];
+    push @info, [ 'bzr',        $workdir->bzr_location ];
     push @info, [ 'database',   $workdir->db ];
 
     my $template = '';

@@ -2,6 +2,8 @@ package Bz::Workdir;
 use Bz;
 use Moo;
 
+extends 'Bz::Repo';
+
 use Bz::Bug;
 use Bz::LocalPatches;
 use Bz::Repo;
@@ -15,13 +17,11 @@ use Safe;
 use Test::Harness qw(&runtests);
 
 has dir         => ( is => 'ro', required => 1 );
-has path        => ( is => 'lazy' );
 has summary     => ( is => 'lazy' );
 has bug_id      => ( is => 'lazy' );
 has bug         => ( is => 'lazy' );
 has repo        => ( is => 'rw', lazy => 1, coerce => \&_coerce_repo, isa => \&_isa_repo, builder => 1 );
 has repo_base   => ( is => 'lazy' );
-has bzr_branch  => ( is => 'lazy' );
 has db          => ( is => 'rw', lazy => 1, coerce => \&_coerce_db, builder => 1 );
 has dbh         => ( is => 'lazy' );
 
@@ -112,18 +112,6 @@ sub _build_repo {
 sub _build_repo_base {
     my ($self) = @_;
     return (split('/', $self->repo))[0];
-}
-
-sub _build_bzr_branch {
-    my ($self) = @_;
-
-    my $bzr_branch = '';
-    my $filename = $self->path . "/.bzr/branch/branch.conf";
-    if (-e $filename) {
-        my $conf = read_file($filename);
-        ($bzr_branch) = $conf =~ /bound_location\s*=\s*(.+)\n/;
-    }
-    return $bzr_branch;
 }
 
 sub _coerce_db {
@@ -227,10 +215,10 @@ sub run_checksetup {
 
 sub fix {
     my ($self) = @_;
+    $self->SUPER::fix();
     Bz::LocalPatches->apply($self);
     $self->fix_params();
     $self->fix_permissions();
-    $self->delete_crud();
 }
 
 sub unfix {
@@ -305,8 +293,9 @@ sub fix_params {
 
 sub fix_permissions {
     my ($self) = @_;
-
     chdir($self->path);
+
+    $self->SUPER::fix_permissions();
     my @spec = glob('*');
     push @spec, '.htaccess';
     push @spec, '.bzr' if -d ".bzr";
@@ -316,64 +305,6 @@ sub fix_permissions {
     @spec = grep { $_ ne 'data' } @spec;
     sudo_on_output("chown -R $user @spec");
     sudo_on_output('find . -path ./data -prune -type d -exec chmod g+x {} \;');
-    foreach my $file (`find . -type f -perm /111`) {
-        chomp $file;
-        next if $file =~ /\.(cgi|pl|swp)$/;
-        next if $file =~ /^\.\/contrib\//;
-        message("fixing permissions for $file");
-        $file = '"' . $file . '"' if $file =~ / /;
-        sudo_on_output("chmod -x $file");
-    }
-}
-
-sub revert_permissions {
-    my ($self) = @_;
-
-    chdir($self->path);
-    foreach my $line (`bzr diff`) {
-        next unless $line =~ /modified file '([^']+)' \(properties changed: ([+-]x) to [+-]x\)/;
-        my ($file, $perm) = ($1, $2);
-        message("fixing properties for $file");
-        $file = '"' . $file . '"' if $file =~ / /;
-        sudo_on_output("chmod $perm $file");
-    }
-}
-
-sub delete_crud {
-    my ($self) = @_;
-
-    my $path = $self->path;
-    my @crud_dirs;
-    find(
-        sub {
-            my $filename = $File::Find::name;
-            return unless
-                $filename =~ /\~\d+\~$/
-                || basename($filename) =~ /^\._/
-                || $filename =~ /\.orig$/
-                || $filename =~ /\.moved$/
-                || $filename =~ /\.rej$/;
-            my $name = $filename;
-            $name =~ s#^\Q$path\E/##;
-            print "deleting $name\n";
-            if (-d $filename) {
-                push @crud_dirs, $filename;
-            } else {
-                unlink($filename);
-            }
-        },
-        $path
-    );
-    foreach my $dir (@crud_dirs) {
-        rmdir($dir);
-    }
-    if (-d "$path/data/deleteme") {
-        print "deleting data/deleteme\n";
-        system (qq#rm -rf "$path/data/deleteme"#);
-        if (-d "$path/data/deleteme") {
-            system (qq#sudo rm -rf "$path/data/deleteme"#);
-        }
-    }
 }
 
 sub check_db {
@@ -386,224 +317,28 @@ sub check_db {
     }
 }
 
-sub sudo_on_output {
-    my ($command) = @_;
-    my $output = `$command 2>&1`;
-    if ($output) {
-        message("escalating $command");
-        system "sudo $command";
-    }
-}
+sub test {
+    my ($self, $opt, $args) = @_;
 
-sub added_files {
-    my ($self) = @_;
-
-    chdir($self->path);
-    my $in_added = 0;
-    my @added_files;
-    foreach my $line (`bzr st`) {
-        chomp $line;
-        if ($line =~ /^  (.+)/) {
-            my $file = $1;
-            next if $file =~ /\@$/;
-            push @added_files, $file if $in_added && !-d $file;
-        } else {
-            $in_added = $line eq 'added:';
-        }
-    }
-    return @added_files;
+    $self->SUPER::test();
+    $self->run_tests($opt, $args);
 }
 
 sub run_tests {
-    my ($self, $opts, @tests) = @_;
+    my ($self, $opt, $args) = @_;
 
     chdir($self->path);
-    $self->check_for_tabs();
-    $self->check_for_unknown_files();
-    $self->check_for_common_mistakes();
-    $self->_run_tests($opts, @tests);
-}
-
-sub _run_tests {
-    my ($self, $opts, @tests) = @_;
-
     my @test_files;
-    if (@tests) {
-        foreach my $number (@tests) {
+    if (@$args) {
+        foreach my $number (@$args) {
             $number = sprintf("%03d", $number);
             push @test_files, glob("t/$number*.t");
         }
     } else {
         push @test_files, glob("t/*.t");
     }
-    $Test::Harness::verbose = $opts->verbose if $opts;
+    $Test::Harness::verbose = $opt->verbose if $opt;
     runtests(@test_files);
-}
-
-sub check_for_tabs {
-    my ($self) = @_;
-
-    my $root = $self->path,
-    my @invalid;
-    my @ignore = qw(
-        js/change-columns.js
-        t/002goodperl.t
-    );
-    find(sub {
-            my $file = $File::Find::name;
-            return if -d $file;
-            return unless -T $file;
-            return if $file =~ /^\Q$root\E\/(\.bzr|contrib|data|js\/yui\d?|docs)\//;
-            return if $file =~ /\.patch$/;
-            my $filename = $file;
-            $filename =~ s/^\Q$root\E\///;
-            return if grep { $_ eq $filename } @ignore;
-            my $content = read_file($file);
-            return unless $content =~ /\t/;
-            push @invalid, $file;
-        },
-        $root
-    );
-
-    return unless @invalid;
-    alert('The following files contain tabs:');
-    foreach my $filename (@invalid) {
-        $filename =~ s/^\Q$root\E\///;
-        alert($filename);
-    }
-    die "\n";
-}
-
-sub check_for_unknown_files {
-    my ($self) = @_;
-
-    chdir($self->path);
-    my @lines = `bzr st`;
-    chomp(@lines);
-
-    my @unknown;
-    my $current;
-    foreach my $line (@lines) {
-        if ($line =~ /^([^:]+):/) {
-            $current = $1;
-        } elsif ($current eq 'unknown') {
-            $line =~ s/^\s+//;
-            next if $line =~ /\.patch$/;
-            push @unknown, $line;
-        }
-    }
-    return unless @unknown;
-
-    alert('The following files are new but are missing from bzr:');
-    my $root = quotemeta($self->path);
-    foreach my $filename (@unknown) {
-        $filename =~ s/^$root\///o;
-        info($filename);
-    }
-}
-
-sub check_for_common_mistakes {
-    my ($self, $filename) = @_;
-
-    chdir($self->path);
-    my @lines;
-    if ($filename) {
-        @lines = read_file($filename);
-    } else {
-        @lines = `bzr diff`;
-    }
-
-    my %whitespace;
-    my %xxx;
-    my $hunk_file;
-    foreach my $line (@lines) {
-        next unless $line =~ /^\+/;
-        if ($line =~ /^\+\+\+ (\S+)/) {
-            $hunk_file = $1;
-            next;
-        }
-        chomp($line);
-        if ($line =~ /\s+$/) {
-            my $ra = $whitespace{$hunk_file} ||= [];
-            push @$ra, $line;
-        }
-        if ($line =~ /XXX/) {
-            my $ra = $xxx{$hunk_file} ||= [];
-            push @$ra, $line;
-        }
-    }
-    if (scalar keys %whitespace) {
-        alert("trailing whitespace added:");
-        foreach my $file (sort keys %whitespace) {
-            info($file);
-            foreach my $line (@{ $whitespace{$file} }) {
-                info("  $line");
-            }
-        }
-    }
-    if (scalar keys %xxx) {
-        alert("line with XXX added:");
-        foreach my $file (sort keys %xxx) {
-            info($file);
-            foreach my $line (@{ $xxx{$file} }) {
-                info("   $line");
-            }
-        }
-    }
-}
-
-sub download_patch {
-    my ($self, $attach_id) = @_;
-    message("fetching attachment #$attach_id");
-
-    my $attachment = Bz->bugzilla->attachment($attach_id);
-    message(sprintf("Bug %s: %s\n", $attachment->{bug_id}, $attachment->{description} || $attachment->{summary}));
-    die "attachment is not a patch\n" unless $attachment->{is_patch} == '1';
-    if ($attachment->{is_obsolete} == '1') {
-        return unless confirm('attachment is obsolete, continue?');
-    }
-
-    my $bug_id = $attachment->{bug_id};
-    my $filename = "$bug_id-$attach_id.patch";
-    my $content = $attachment->{data};
-    $content =~ s/\015\012/\012/g;
-
-    if ($self->bug_id && $self->bug_id != $bug_id) {
-        my $summary = Bz::Bug->new({ id => $bug_id })->summary;
-        exit unless confirm("the patch from a different bug:\nBug $bug_id: $summary\ncontinue?");
-    }
-
-    chdir($self->path);
-    info("creating $filename");
-    write_file($filename, { binmode => ':raw' }, $content);
-    return $filename;
-}
-
-sub apply_patch {
-    my ($self, $filename) = @_;
-
-    chdir($self->path);
-    my @patch = read_file($filename);
-
-    my $p = 0;
-    foreach my $line (@patch) {
-        if ($line =~ /^diff --git a\//) {
-            $p = 1;
-            last;
-        }
-    }
-
-    open(my $patch, "|patch -p$p");
-    foreach my $line (@patch) {
-        # === renamed file 'extensions/BMO/web/js/choose_product.js' => 'extensions/BMO/web/js/prod_comp_search.js'
-        if ($line =~ /^=== renamed file '([^']+)' => '([^']+)'/) {
-            print "renamed '$1' => '$2'\n";
-            rename($1, $2);
-            next;
-        }
-        print $patch $line;
-    }
-    close($patch);
 }
 
 1;

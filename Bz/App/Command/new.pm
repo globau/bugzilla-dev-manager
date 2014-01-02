@@ -4,7 +4,6 @@ use Bz;
 
 use Bz::Bug;
 use Bz::Repo;
-use Bz::Terminal;
 use Bz::Workdir;
 
 sub abstract {
@@ -69,7 +68,7 @@ sub execute {
     $workdir->update_localconfig();
     $workdir->run_checksetup();
     $workdir->fix();
-    $mysql->check_db($workdir->db);
+    $workdir->check_db();
 
     info("$dir created\n" . $workdir->summary);
     notify("$dir created");

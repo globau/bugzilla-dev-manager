@@ -21,7 +21,11 @@ sub execute {
         return;
     }
 
-    # XXX check for repo
+    if (my $repo = eval { Bz->current_repo }) {
+        info("fixing repo " . $repo->bzr_branch);
+        $repo->fix();
+        return;
+    }
 
     die "invalid working directory\n";
 }
