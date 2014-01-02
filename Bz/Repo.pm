@@ -197,9 +197,8 @@ sub check_for_tabs {
     alert('The following files contain tabs:');
     foreach my $filename (@invalid) {
         $filename =~ s/^\Q$root\E\///;
-        alert($filename);
+        warning($filename);
     }
-    die "\n";
 }
 
 sub check_for_unknown_files {
@@ -226,7 +225,7 @@ sub check_for_unknown_files {
     my $root = quotemeta($self->path);
     foreach my $filename (@unknown) {
         $filename =~ s/^$root\///o;
-        message($filename);
+        warning($filename);
     }
 }
 
@@ -263,18 +262,18 @@ sub check_for_common_mistakes {
     if (scalar keys %whitespace) {
         alert("trailing whitespace added:");
         foreach my $file (sort keys %whitespace) {
-            message($file);
+            warning($file);
             foreach my $line (@{ $whitespace{$file} }) {
-                message("  $line");
+                warning("  $line");
             }
         }
     }
     if (scalar keys %xxx) {
         alert("line with XXX added:");
         foreach my $file (sort keys %xxx) {
-            message($file);
+            warning($file);
             foreach my $line (@{ $xxx{$file} }) {
-                message("   $line");
+                warning("   $line");
             }
         }
     }
