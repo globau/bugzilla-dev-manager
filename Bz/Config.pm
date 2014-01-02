@@ -4,7 +4,6 @@ use Moo;
 
 use Bz::Workdir;
 use Config::General;
-use FindBin '$RealBin';
 
 # bz.conf
 
@@ -19,8 +18,9 @@ sub _build_prefs_path {
 }
 
 sub _build__config {
+    my ($self) = @_;
     my %config = Config::General->new(
-        -ConfigFile         => "$RealBin/bz.conf",
+        -ConfigFile         => $self->prefs_path . "/bz.conf",
         -LowerCaseNames     => 1,
         -InterPolateVars    => 1,
     )->getall();
