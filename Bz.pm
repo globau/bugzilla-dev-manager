@@ -88,4 +88,12 @@ sub current {
     die "invalid working directory\n";
 }
 
+#
+
+sub bug {
+    my ($class, $bug_id) = @_;
+    require Bz::Bug;
+    return Bz::Bug->new({ id => $bug_id });
+}
+
 1;
