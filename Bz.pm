@@ -79,4 +79,13 @@ sub current_repo {
     return Bz::Repo->new({ path => $path });
 }
 
+sub current {
+    my ($class) = @_;
+    my $current = eval { $class->current_workdir() };
+    return $current if $current;
+    $current = eval { $class->current_repo() };
+    return $current if $current;
+    die "invalid working directory\n";
+}
+
 1;

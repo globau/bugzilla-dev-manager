@@ -25,15 +25,10 @@ EOF
 sub execute {
     my ($self, $opt, $args) = @_;
 
-    if (my $workdir = eval { Bz->current_workdir }) {
-        info("running tests");
-        $workdir->test($opt, $args);
-        return;
-    }
-
-    # XXX check for repo
-
-    die "invalid working directory\n";
+    my $current = Bz->current();
+    info("running tests");
+    # XXX ensure repo tests work
+    $current->test($opt, $args);
 }
 
 1;

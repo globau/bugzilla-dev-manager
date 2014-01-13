@@ -15,19 +15,9 @@ EOF
 sub execute {
     my ($self, $opt, $args) = @_;
 
-    if (my $workdir = eval { Bz->current_workdir }) {
-        info("fixing instance " . $workdir->dir);
-        $workdir->fix();
-        return;
-    }
-
-    if (my $repo = eval { Bz->current_repo }) {
-        info("fixing repo " . $repo->bzr_branch);
-        $repo->fix();
-        return;
-    }
-
-    die "invalid working directory\n";
+    my $current = Bz->current();
+    info("fixing $current");
+    $current->fix();
 }
 
 1;

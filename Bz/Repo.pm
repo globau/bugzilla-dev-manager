@@ -11,6 +11,10 @@ has path            => ( is => 'lazy' );
 has bzr_branch      => ( is => 'lazy' );
 has bzr_location    => ( is => 'lazy' );
 
+use overload (
+    '""' => sub { "repo " . $_[0]->bzr_branch }
+);
+
 sub _build_dir {
     my ($self) = @_;
     return basename($self->path);

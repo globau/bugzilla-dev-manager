@@ -20,13 +20,14 @@ EOF
 sub execute {
     my ($self, $opt, $args) = @_;
 
-    if (my $workdir = eval { Bz->current_workdir }) {
-        my $bug_id = $workdir->bug_id ? $workdir->bug_id : $args->[0];
+    my $current = Bz->current();
+    if ($current->isa('Bz::Workdir')) {
+        my $bug_id = $current->bug_id ? $current->bug_id : $args->[0];
         die $self->usage_error('missing bug_id') unless $bug_id;
-        $self->_patch($workdir, $bug_id);
+        $self->_patch($current, $bug_id);
 
     } else {
-        # XXX check for repo
+        # XXX repo
         die "invalid working directory\n";
     }
 }

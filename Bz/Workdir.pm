@@ -25,6 +25,10 @@ has repo_base   => ( is => 'lazy' );
 has db          => ( is => 'rw', lazy => 1, coerce => \&_coerce_db, builder => 1 );
 has dbh         => ( is => 'lazy' );
 
+use overload (
+    '""' => sub { "instance " . $_[0]->dir }
+);
+
 sub BUILD {
     my ($self, $args) = @_;
     return if $args->{ignore_error};
