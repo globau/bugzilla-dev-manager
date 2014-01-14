@@ -34,7 +34,6 @@ sub execute {
     }
     info($summary || Bz->bug($bug_id)->summary);
 
-    my $attacments = Bz->bugzilla->attachments($bug_id);
     my @patches = (
         grep { $_->{is_patch} && !$_->{is_obsolete} }
         @{ Bz->bugzilla->attachments($bug_id) }
