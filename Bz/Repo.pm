@@ -299,7 +299,7 @@ sub download_patch {
     my $content = $attachment->{data};
     $content =~ s/\015\012/\012/g;
 
-    if ($self->bug_id && $self->bug_id != $bug_id) {
+    if ($self->can('bug_id') && $self->bug_id && $self->bug_id != $bug_id) {
         my $summary = Bz::Bug->new({ id => $bug_id })->summary;
         exit unless confirm("the patch from a different bug:\nBug $bug_id: $summary\ncontinue?");
     }
