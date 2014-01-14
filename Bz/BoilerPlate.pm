@@ -70,14 +70,12 @@ sub add {
     my ($ext) = $file =~ /^.+\.(.+)$/;
     my $boiler_plate = BOILER_PLATES->{$ext}
         or die "failed to find boiler-plate for .$ext\n";
-    my @boiler_plate = split(/\n/, $boiler_plate);
-    push @boiler_plate, '';
 
     my @file = read_file($file);
     if ($file[0] =~ /^#!/) {
-        splice(@file, 1, ($file[1] eq "\n" ? 1 : 0), ("\n", @boiler_plate));
+        splice(@file, 1, ($file[1] eq "\n" ? 1 : 0), "\n$boiler_plate\n");
     } else {
-        splice(@file, 0, 0, @boiler_plate);
+        splice(@file, 0, 0, "$boiler_plate\n");
     }
     write_file($file, join('', @file));
     message("$file updated");
