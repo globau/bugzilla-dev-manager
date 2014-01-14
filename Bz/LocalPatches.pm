@@ -76,14 +76,14 @@ sub _patch {
         if ($patch->{whole}) {
             $_ = read_file($patch->{file});
             next unless $match->($workdir);
-            print(($mode eq 'revert' ? 'reverting' : 'applying') . " patch " . $patch->{desc} . "\n");
+            message(($mode eq 'revert' ? 'reverting' : 'applying') . " patch " . $patch->{desc});
             $action->($workdir);
             write_file($patch->{file}, $_);
         } else {
             my @file = read_file($patch->{file});
             foreach (@file) {
                 next unless $match->($workdir);
-                print(($mode eq 'revert' ? 'reverting' : 'applying') . " patch " . $patch->{desc} . "\n");
+                message(($mode eq 'revert' ? 'reverting' : 'applying') . " patch " . $patch->{desc});
                 $action->($workdir);
             }
             write_file($patch->{file}, @file);

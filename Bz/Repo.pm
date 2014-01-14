@@ -74,7 +74,7 @@ sub fix_line_endings {
             return unless $content =~ /\015\012/;
             my $filename = $File::Find::name;
             $filename =~ s/^\.\///;
-            print "converting $filename to unix line endings\n";
+            message("converting $filename to unix line endings");
             $content =~ s/\015\012/\012/g;
             write_file($file, { binmod => ':raw' }, $content);
         },
@@ -125,7 +125,7 @@ sub delete_crud {
                 || $filename =~ /\.rej$/;
             my $name = $filename;
             $name =~ s#^\Q$path\E/##;
-            print "deleting $name\n";
+            message("deleting $name");
             if (-d $filename) {
                 push @crud_dirs, $filename;
             } else {
@@ -138,7 +138,7 @@ sub delete_crud {
         rmdir($dir);
     }
     if (-d "$path/data/deleteme") {
-        print "deleting data/deleteme\n";
+        message("deleting data/deleteme");
         system (qq#rm -rf "$path/data/deleteme"#);
         if (-d "$path/data/deleteme") {
             system (qq#sudo rm -rf "$path/data/deleteme"#);
@@ -288,7 +288,7 @@ sub download_patch {
     message("fetching attachment #$attach_id");
 
     my $attachment = Bz->bugzilla->attachment($attach_id);
-    message(sprintf("Bug %s: %s\n", $attachment->{bug_id}, $attachment->{description} || $attachment->{summary}));
+    message(sprintf("Bug %s: %s", $attachment->{bug_id}, $attachment->{description} || $attachment->{summary}));
     die "attachment is not a patch\n" unless $attachment->{is_patch} == '1';
     if ($attachment->{is_obsolete} == '1') {
         return unless confirm('attachment is obsolete, continue?');
@@ -328,7 +328,7 @@ sub apply_patch {
     foreach my $line (@patch) {
         # === renamed file 'extensions/BMO/web/js/choose_product.js' => 'extensions/BMO/web/js/prod_comp_search.js'
         if ($line =~ /^=== renamed file '([^']+)' => '([^']+)'/) {
-            print "renamed '$1' => '$2'\n";
+            message("renamed '$1' => '$2'");
             rename($1, $2);
             next;
         }

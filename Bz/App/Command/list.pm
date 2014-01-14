@@ -10,7 +10,7 @@ sub execute {
     my ($self, $opt, $args) = @_;
 
     foreach my $workdir (@{ Bz->config->workdirs }) {
-        printf "%s: %s\n", $workdir->dir, $workdir->summary;
+        message(sprintf("%s: %s", $workdir->dir, $workdir->summary));
     }
 }
 

@@ -288,7 +288,7 @@ sub fix_params {
         next if
             !exists $orig_params{$name}
             or $params{$name} eq $orig_params{$name};
-        print "setting '$name' to '$params{$name}'\n";
+        message("setting '$name' to '$params{$name}'");
     }
 
     local $Data::Dumper::Sortkeys = 1;

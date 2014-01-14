@@ -44,7 +44,7 @@ sub execute {
             print $workdir->dir, "\n";
             return;
         } else {
-            printf "%s: %s\n", $workdir->dir, $workdir->summary;
+            message(sprintf("%s: %s", $workdir->dir, $workdir->summary));
         }
     }
 }
