@@ -333,7 +333,7 @@ sub run_tests {
 
     chdir($self->path);
     my @test_files;
-    if (@$args) {
+    if ($args && @$args) {
         foreach my $number (@$args) {
             $number = sprintf("%03d", $number);
             push @test_files, glob("t/$number*.t");
