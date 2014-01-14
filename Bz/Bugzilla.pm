@@ -53,7 +53,7 @@ sub attachments {
             ids => [ $bug_id ],
             exclude_fields => [ 'data' ],
         }
-    )->{bugs}->{$bug_id};
+    )->{bugs}->{$bug_id} // [];
 }
 
 sub attachment {

@@ -23,7 +23,8 @@ sub execute {
     my $current = Bz->current();
     my $is_workdir = $current->isa('Bz::Workdir');
     my $bug_id = $is_workdir ? $current->bug_id : undef;
-    $bug_id ||= $args->[0];
+    $bug_id ||= shift @$args;
+    $bug_id = shift @$args if $bug_id eq 'bug';
     die $self->usage_error('missing bug_id') unless $bug_id;
 
     message("fetching patches from bug $bug_id");
@@ -33,6 +34,7 @@ sub execute {
     }
     info($summary || Bz->bug($bug_id)->summary);
 
+    my $attacments = Bz->bugzilla->attachments($bug_id);
     my @patches = (
         grep { $_->{is_patch} && !$_->{is_obsolete} }
         @{ Bz->bugzilla->attachments($bug_id) }
