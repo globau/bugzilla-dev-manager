@@ -26,10 +26,9 @@ EOF
 
 sub execute {
     my ($self, $opt, $args) = @_;
-    my $repo = Bz->current_repo;
-    my $workdir = eval { Bz->current_workdir };
+    my $repo = Bz->current;
     die "unable to commit from a development instance\n"
-        if $workdir;
+        if $repo->isa('Bz::Workdir');
 
     info("committing bug " . $args->[0]);
     my $bug = Bz->bug($args->[0]);
