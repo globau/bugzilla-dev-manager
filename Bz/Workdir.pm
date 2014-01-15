@@ -70,8 +70,8 @@ sub _build_bug {
 
 sub _coerce_repo {
     my $repo = lc($_[0] || '');
+    $repo =~ s#(^\s+|\s+$)##g;
     $repo =~ s#^repo[\\|/]##;
-    $repo =~ s#-#/#g;
     return $repo;
 }
 
@@ -94,10 +94,6 @@ sub _isa_repo {
 
 sub _build_repo {
     my ($self) = @_;
-    my $filename = $self->path . '/data/repo-version';
-
-    return read_file($filename) if -e $filename;
-
     my $repo = '';
     chdir($self->path);
     if (-d '.bzr') {
@@ -106,10 +102,8 @@ sub _build_repo {
             $repo = $1;
             $repo =~ s/(^\s+|\s+$)//g;
             $repo =~ s#/$##;
-            $repo =~ s#/#-#;
         }
     }
-    write_file($filename, $repo);
     return $repo;
 }
 
@@ -230,6 +224,17 @@ sub unfix {
     Bz::LocalPatches->revert($self);
     $self->revert_permissions();
     $self->delete_crud();
+}
+
+sub delete_crud {
+    my ($self) = @_;
+    $self->SUPER::delete_crud();
+
+    my $filename = $self->path . '/data/repo-version';
+    return unless -e $filename;
+
+    message("deleting data/repo-version");
+    unlink($filename);
 }
 
 sub fix_params {
