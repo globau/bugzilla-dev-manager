@@ -24,6 +24,7 @@ our @EXPORT = qw(
 );
 
 use File::Slurp;
+use IPC::System::Simple 'runx';
 use Term::ANSIColor 'colored';
 use Term::ReadKey;
 use Time::HiRes 'usleep';
@@ -129,23 +130,19 @@ sub notify {
     $title[0] = 'bz'; # script
     my $title = join(' ', @title);
 
-    # XXX shell-escape $title and $message
-
     # terminal-notifier
-    system(
-        'ssh',
-        'byron@mac',
-        join(
-            ' ',
-            (
-                '/usr/local/bin/terminal-notifier',
-                '-sound Pop',
-                '-activate com.googlecode.iterm2',
-                '-title "' . $title . '"',
-                '-message "' . $message . '"',
-            )
-        )
-    );
+    $title = "can't \"do this\"?";
+    $title =~ s/"/\\"/g;
+    $title =~ s/[\r\n]+/ /g;
+    $message =~ s/"/\\"/g;
+    $message =~ s/[\r\n]+/ /g;
+    my $remote_command =
+        '/usr/local/bin/terminal-notifier ' .
+        '-sound Pop ' .
+        '-activate com.googlecode.iterm2 ' .
+        qq#-title "$title" # .
+        qq#-message "$message" #;
+    runx('ssh', 'byron@mac', $remote_command);
 }
 
 sub dieInfo {
