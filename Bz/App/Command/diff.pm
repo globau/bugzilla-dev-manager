@@ -5,7 +5,7 @@ use Bz;
 use File::Slurp;
 
 sub abstract {
-    return "XXX";
+    return "generate a new patch";
 }
 
 sub usage_desc {
@@ -22,7 +22,7 @@ sub opt_spec {
 
 sub description {
     return <<EOF;
-XXX
+executes a subset of tests, then creates a patch with the current changes.
 EOF
 }
 

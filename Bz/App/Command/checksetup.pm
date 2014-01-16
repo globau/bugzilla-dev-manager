@@ -15,7 +15,8 @@ sub abstract {
 
 sub description {
     return <<EOF;
-XXX
+executes checksetup.pl for the current working directory (from any location
+with in).
 EOF
 }
 

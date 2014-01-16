@@ -7,12 +7,13 @@ use constant ALIASES => qw(
 );
 
 sub abstract {
-    return "resets the backoff for email, to force email to be sent on the next run";
+    return "resets the backoff for queued email";
 }
 
 sub description {
     return <<EOF;
-XXX
+resets the backoff for queued email, to force email to be sent on the next
+run.
 EOF
 }
 

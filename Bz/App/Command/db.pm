@@ -12,7 +12,9 @@ sub usage_desc {
 
 sub description {
     return <<EOF;
-XXX
+without an argument returns the name of the instance's database.
+
+providing a database name will change the instance's database.
 EOF
 }
 

@@ -8,7 +8,11 @@ sub abstract {
 
 sub description {
     return <<EOF;
-XXX
+updates all profiles to disable bugmail and removes the cc_list for all
+flagtypes.
+
+users listed in the config file's never_disable_bugmail will not have their
+email disabled.
 EOF
 }
 

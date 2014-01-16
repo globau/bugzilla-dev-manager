@@ -16,7 +16,9 @@ sub usage_desc {
 
 sub description {
     return <<EOF;
-XXX
+creates a new instance, using the provided name.
+
+providing a bug_id as the <dir> is recommended.
 EOF
 }
 

@@ -6,12 +6,6 @@ sub abstract {
     return "reverts changes made by fix";
 }
 
-sub description {
-    return <<EOF;
-XXX
-EOF
-}
-
 sub execute {
     my ($self, $opt, $args) = @_;
 

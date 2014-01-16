@@ -14,7 +14,8 @@ sub abstract {
 
 sub description {
     return <<EOF;
-XXX
+after confirmation, an mpl2 boiler-plate will added to new files which are
+missing the license.
 EOF
 }
 

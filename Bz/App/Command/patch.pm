@@ -13,7 +13,10 @@ sub usage_desc {
 
 sub description {
     return <<EOF;
-XXX
+downloads and applies a patch from the specified bug.
+
+if the current instance's directory name is a bug id, that bug will be queried
+for attachments.  when executed from a repo the bug_id is required.
 EOF
 }
 

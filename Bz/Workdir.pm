@@ -159,7 +159,6 @@ sub create_dir {
     die $self->path . "/checksetup.pl missing\n" unless -e $self->path . "/checksetup.pl";
 }
 
-# XXX move localconfig creation and updating to dedicated class
 sub create_default_localconfig {
     my ($self) = @_;
     return if -e $self->path . '/localconfig';

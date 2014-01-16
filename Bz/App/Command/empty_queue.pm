@@ -10,12 +10,6 @@ sub abstract {
     return "deletes all emails from the email queue";
 }
 
-sub description {
-    return <<EOF;
-XXX
-EOF
-}
-
 sub execute {
     my ($self, $opt, $args) = @_;
     my $workdir = Bz->current_workdir;

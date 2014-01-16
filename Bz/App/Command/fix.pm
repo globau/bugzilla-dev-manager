@@ -3,12 +3,12 @@ use parent 'Bz::App::Base';
 use Bz;
 
 sub abstract {
-    return "XXX";
+    return "fixes an instance";
 }
 
 sub description {
     return <<EOF;
-XXX
+performs several changes to make an instance work within the environment.
 EOF
 }
 

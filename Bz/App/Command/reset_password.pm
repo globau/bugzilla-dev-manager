@@ -3,7 +3,7 @@ use parent 'Bz::App::Base';
 use Bz;
 
 sub abstract {
-    return "changes the password of a bugzilla user, without running full checksetup";
+    return "changes the password of a bugzilla user";
 }
 
 sub usage_desc {
@@ -12,7 +12,7 @@ sub usage_desc {
 
 sub description {
     return <<EOF;
-XXX
+changes the password of a bugzilla user, without running full checksetup
 EOF
 }
 
