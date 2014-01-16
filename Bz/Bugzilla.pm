@@ -20,7 +20,7 @@ sub _build__proxy {
 
 sub _build__cookiejar {
     return HTTP::Cookies->new(
-        file        => Bz->config->prefs_path . '/cookie_jar.txt',
+        file        => Bz->config->user_path . '/cookie_jar.txt',
         autosave    => 1,
     );
 }

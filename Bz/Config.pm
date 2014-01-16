@@ -5,12 +5,12 @@ use Moo;
 use Bz::Workdir;
 use Config::General;
 
-# bz.conf
+use constant CONF_FILENAME => '/etc/bz-dev.conf';
 
-has prefs_path  => ( is => 'lazy' );
-has _config     => ( is => 'lazy' );
+has user_path  => ( is => 'lazy' );
+has _config    => ( is => 'lazy' );
 
-sub _build_prefs_path {
+sub _build_user_path {
     my $path = "~/.bz-dev";
     $path =~ s{^~([^/]*)}{$1 ? (getpwnam($1))[7] : (getpwuid($<))[7]}e;
     mkdir($path) unless -d $path;
@@ -19,8 +19,10 @@ sub _build_prefs_path {
 
 sub _build__config {
     my ($self) = @_;
+    die "failed to find " . CONF_FILENAME . "\n"
+        unless -e CONF_FILENAME;
     my %config = Config::General->new(
-        -ConfigFile         => $self->prefs_path . "/bz.conf",
+        -ConfigFile         => CONF_FILENAME,
         -LowerCaseNames     => 1,
         -InterPolateVars    => 1,
     )->getall();

@@ -1,3 +1,5 @@
-bind mounting www
 
-/var/www/logbot.glob.com.au    /home/logbot/logbot/www     none defaults,bind 0 0
+installation
+- copy bz-dev.conf-sample to /etc/bz-def.conf and edit
+- share the www directory with apache (symlink, copy, bind mount, etc)
+
