@@ -131,7 +131,6 @@ sub notify {
     my $title = join(' ', @title);
 
     # terminal-notifier
-    $title = "can't \"do this\"?";
     $title =~ s/"/\\"/g;
     $title =~ s/[\r\n]+/ /g;
     $message =~ s/"/\\"/g;
