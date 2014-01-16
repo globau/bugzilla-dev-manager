@@ -36,11 +36,11 @@ sub execute {
     my $message = 'Bug ' . $bug->id . ': ' . $bug->summary;
 
     chdir($repo->path);
-    system "bzr st";
+    $repo->bzr('st');
     info(sprintf("bzr commit --fixes mozilla:%s -m '%s'", $bug->id, $message));
     return unless confirm("commit?");
-    system(
-        'bzr', 'commit',
+    $repo->bzr(
+        'commit',
         '--fixes', 'mozilla:' . $bug->id,
         '-m', 'Bug ' . $bug->id . ': ' . $bug->summary,
     );

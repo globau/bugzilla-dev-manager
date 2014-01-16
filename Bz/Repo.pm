@@ -5,6 +5,7 @@ use Moo;
 use File::Basename;
 use File::Find;
 use File::Slurp;
+use IPC::System::Simple qw(EXIT_ANY capturex runx);
 
 has dir             => ( is => 'lazy' );
 has path            => ( is => 'lazy' );
@@ -44,12 +45,22 @@ sub _build_bzr_location {
     return $bzr_location;
 }
 
+sub bzr {
+    my ($self, @args) = @_;
+    chdir($self->path);
+    if (defined wantarray()) {
+        return capturex(EXIT_ANY, 'bzr', @args);
+    } else {
+        return runx(EXIT_ANY, 'bzr', @args);
+    }
+}
+
 sub update {
     my ($self) = @_;
     info("updating repo " . $self->dir);
     $self->fix();
     chdir($self->path);
-    system "bzr up";
+    $self->bzr('up');
 }
 
 sub fix {
@@ -86,7 +97,7 @@ sub revert_permissions {
     my ($self) = @_;
 
     chdir($self->path);
-    foreach my $line (`bzr diff`) {
+    foreach my $line ($self->bzr('diff')) {
         next unless $line =~ /modified file '([^']+)' \(properties changed: ([+-]x) to [+-]x\)/;
         my ($file, $perm) = ($1, $2);
         message("fixing properties for $file");
@@ -152,7 +163,7 @@ sub added_files {
     chdir($self->path);
     my $in_added = 0;
     my @added_files;
-    foreach my $line (`bzr st`) {
+    foreach my $line ($self->bzr('st')) {
         chomp $line;
         if ($line =~ /^  (.+)/) {
             my $file = $1;
@@ -209,7 +220,7 @@ sub check_for_unknown_files {
     my ($self) = @_;
 
     chdir($self->path);
-    my @lines = `bzr st`;
+    my @lines = $self->bzr('st');
     chomp(@lines);
 
     my @unknown;

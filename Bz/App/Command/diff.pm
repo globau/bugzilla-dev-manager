@@ -64,8 +64,9 @@ sub diff {
 
     $workdir->unfix();
     chdir($workdir->path);
-    my $command = "bzr diff " . ($opt->whitespace ? "--diff-options -w " : '');
-    my $patch = `$command`;
+    my @command = ('diff');
+    push @command, ('--diff-options', '-w') if $opt->whitespace;
+    my $patch = $workdir->bzr(@command);
     my $filename;
     if ($opt->stdout) {
         print $patch;

@@ -97,7 +97,7 @@ sub _build_repo {
     my $repo = '';
     chdir($self->path);
     if (-d '.bzr') {
-        my $bzr = `bzr info`;
+        my $bzr = $self->bzr('info');
         if ($bzr =~ m#bzr\.mozilla\.org/((bugzilla|bmo)/.+)#) {
             $repo = $1;
             $repo =~ s/(^\s+|\s+$)//g;
