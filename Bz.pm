@@ -88,6 +88,24 @@ sub current {
     die "invalid working directory\n";
 }
 
+my $_workdirs;
+sub workdirs {
+    require Bz::Workdir;
+    chdir(Bz->config->htdocs_path);
+    return $_workdirs ||= [
+        grep { $_->summary }
+        map { Bz::Workdir->new({ dir => $_ }) }
+        grep { !-l $_ && -d $_ }
+        glob('*')
+    ];
+}
+
+sub preload_bugs {
+    my ($class, $workdirs) = @_;
+    my @bug_ids = map { $_->bug_id } grep { $_->bug_id } @$workdirs;
+    Bz->bugzilla->bugs(\@bug_ids);
+}
+
 #
 
 sub bug {

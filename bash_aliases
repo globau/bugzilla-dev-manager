@@ -1,48 +1,18 @@
-
 BZ_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BZ_DOCS=`perl -I"$BZ_ROOT" -MBz -e 'print Bz->config->htdocs_path'`
-BZ_REPO=`perl -I"$BZ_ROOT" -MBz -e 'print Bz->config->repo_path'`
 
 alias bz="$BZ_ROOT/bz"
 
 function bznew {
     bz new "$@"
+    BZ_DOCS=`perl -I"$BZ_ROOT" -MBz -e 'print Bz->config->htdocs_path'`
     cd "$BZ_DOCS/$1"
 }
 
 function cdb() {
-    if [ -z "$1" ]; then
-        PWD=`pwd`
-        if [[ "$PWD" =~ ^$BZ_DOCS/ ]]; then
-            LEN=`expr length "$BZ_DOCS/"`
-            P=${PWD:$LEN}
-            IFS=/ A=( $P )
-            cd "$BZ_DOCS/${A[0]}"
-            return
-        fi;
-        PWD=`pwd -P`
-        if [[ "$PWD" =~ ^$BZ_DOCS/ ]]; then
-            LEN=`expr length "$BZ_DOCS/"`
-            P=${PWD:$LEN}
-            IFS=/ A=( $P )
-            cd "$BZ_DOCS/${A[0]}"
-            return
-        fi;
-        cd "$BZ_DOCS"
-        return;
-    fi
-    if [[ "$1" == */* ]]; then
-        cd "$BZ_REPO/$1"
-    elif [ -d "$BZ_DOCS/$1" ]; then
-        cd "$BZ_DOCS/$1"
-    else
-        cd "$BZ_DOCS/`bz grep -n $@`"
-    fi
-    if [ -f "data/summary" ]; then
-        echo "[Bug ${PWD##*/}] `cat data/summary`" | perl -MTerm::ANSIColor -ne "print colored(\$_,'green')"
-    fi
+    cd `bz path "$@"`
+    bz summary
 }
 
 function cdr() {
-    cd "$BZ_REPO/$1"
+    cd `bz path --repo "$@"`
 }

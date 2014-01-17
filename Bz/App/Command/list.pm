@@ -9,7 +9,7 @@ sub abstract {
 sub execute {
     my ($self, $opt, $args) = @_;
 
-    foreach my $workdir (@{ Bz->config->workdirs }) {
+    foreach my $workdir (@{ Bz->workdirs }) {
         message(sprintf("%s: %s", $workdir->dir, $workdir->summary));
     }
 }

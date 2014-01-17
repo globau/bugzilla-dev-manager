@@ -38,7 +38,7 @@ sub execute {
         return $hits == scalar(@$args);
     };
 
-    foreach my $workdir (@{ Bz->config->workdirs }) {
+    foreach my $workdir (@{ Bz->workdirs }) {
         next unless $match->($workdir);
         if ($opt->nameonly) {
             print $workdir->dir, "\n";

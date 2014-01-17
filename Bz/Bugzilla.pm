@@ -6,9 +6,20 @@ use Bz::Bugzilla;
 use HTTP::Cookies;
 use XMLRPC::Lite;
 
+use constant BUG_FIELDS => [qw(
+    id
+    product
+    version
+    target_milestone
+    summary
+    status
+    assigned_to
+)];
+
 has _proxy          => ( is => 'lazy' );
 has _cookiejar      => ( is => 'lazy' );
 has _authenticated  => ( is => 'rw', builder => 1);
+has _bug_cache      => ( is => 'rw', default => sub { {} } );
 
 sub _build__proxy {
     my ($self) = @_;
@@ -31,17 +42,49 @@ sub _build__authenticated {
 }
 
 sub bug {
-    my ($self, $args) = @_;
-    die "missing id" unless $args->{id};
+    my ($self, $bug_id) = @_;
+    die "missing id" unless $bug_id;
 
-    my $response = $self->_rpc(
-        'Bug.get',
-        {
-            ids => [ $args->{id} ],
-            include_fields => $args->{fields},
+    if (!exists $self->_bug_cache->{$bug_id}) {
+        my $response = $self->_rpc(
+            'Bug.get',
+            {
+                ids => [ $bug_id ],
+                include_fields => BUG_FIELDS,
+            }
+        );
+        $self->_bug_cache->{$bug_id} = $response->{bugs}->[0];
+    }
+    return $self->_bug_cache->{$bug_id};
+}
+
+sub bugs {
+    my ($self, $bug_ids) = @_;
+    die "missing ids" unless $bug_ids && @$bug_ids;
+
+    my @fetch_ids;
+    foreach my $bug_id (@$bug_ids) {
+        push @fetch_ids, $bug_id unless exists $self->_bug_cache->{$bug_id};
+    }
+
+    if (@fetch_ids) {
+        my $response = $self->_rpc(
+            'Bug.get',
+            {
+                ids => \@fetch_ids,
+                include_fields => BUG_FIELDS,
+            }
+        );
+        foreach my $bug (@{ $response->{bugs} }) {
+            $self->_bug_cache->{$bug->{id}} = $bug;
         }
-    );
-    return $response->{bugs}->[0];
+    }
+
+    my @response;
+    foreach my $bug_id (@$bug_ids) {
+        push @response, $self->_bug_cache->{$bug_id};
+    }
+    return \@response;
 }
 
 sub attachments {

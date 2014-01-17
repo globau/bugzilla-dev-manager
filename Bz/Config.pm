@@ -47,21 +47,6 @@ sub AUTOLOAD {
     return $config->{$name};
 }
 
-# globals
-
-has workdirs => ( is => 'lazy' );
-
-sub _build_workdirs {
-    my ($self) = @_;
-    chdir($self->htdocs_path);
-    return [
-        grep { $_->summary }
-        map { Bz::Workdir->new({ dir => $_ }) }
-        grep { !-l $_ && -d $_ }
-        glob('*')
-    ];
-}
-
 1;
 
 package Bz::Config::Section;
