@@ -95,10 +95,10 @@ sub _isa_repo {
 sub _build_repo {
     my ($self) = @_;
     my $repo = '';
-    chdir($self->path);
-    if (-d '.bzr') {
-        my $bzr = $self->bzr('info');
-        if ($bzr =~ m#bzr\.mozilla\.org/((bugzilla|bmo)/.+)#) {
+    my $file = $self->path . '/.bzr/branch/branch.conf';
+    if (-e $file) {
+        my $conf = read_file($file);
+        if ($conf =~ m#bzr\.mozilla\.org/((bugzilla|bmo)/.+)#) {
             $repo = $1;
             $repo =~ s/(^\s+|\s+$)//g;
             $repo =~ s#/$##;
