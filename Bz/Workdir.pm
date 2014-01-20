@@ -204,6 +204,13 @@ sub update_localconfig {
     write_file($self->path . '/localconfig', @file);
 }
 
+sub localconfig {
+    my ($self) = @_;
+    unshift @INC, $self->path;
+    require Bugzilla::Install::Localconfig;
+    return Bugzilla::Install::Localconfig::read_localconfig();
+}
+
 sub run_checksetup {
     my ($self, @args) = @_;
     info("running checksetup");
