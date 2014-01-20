@@ -12,6 +12,7 @@ use Data::Dumper;
 use File::Basename;
 use File::Copy::Recursive 'dircopy';
 use File::Find;
+use File::Path 'remove_tree';
 use File::Slurp;
 use Safe;
 use Test::Harness qw(&runtests);
@@ -79,7 +80,7 @@ sub _isa_repo {
     my ($repo) = @_;
     my $config = Bz->config;
 
-    die "missing repo\n" if $repo eq '';
+    return if $repo eq '';
     my $found = 0;
     foreach my $try ("$repo", "bugzilla/$repo", "bmo/$repo") {
         if (-d $config->repo_path . "/$try") {
@@ -347,6 +348,12 @@ sub run_tests {
     }
     $Test::Harness::verbose = $opt->verbose if $opt;
     runtests(@test_files);
+}
+
+sub delete {
+    my ($self) = @_;
+    chdir(Bz->config->htdocs_path);
+    remove_tree($self->dir, { safe => 1 });
 }
 
 1;

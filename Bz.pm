@@ -93,7 +93,6 @@ sub workdirs {
     require Bz::Workdir;
     chdir(Bz->config->htdocs_path);
     return $_workdirs ||= [
-        grep { $_->summary }
         map { Bz::Workdir->new({ dir => $_ }) }
         grep { !-l $_ && -d $_ }
         glob('*')
@@ -107,6 +106,12 @@ sub preload_bugs {
 }
 
 #
+
+sub workdir {
+    my ($class, $dir) = @_;
+    require Bz::Workdir;
+    return Bz::Workdir->new({ dir => $dir });
+}
 
 sub bug {
     my ($class, $bug_id) = @_;

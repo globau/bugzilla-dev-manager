@@ -1,5 +1,14 @@
 
 installation
+- create two directories:
+    /opt/bugzilla/htdocs
+    /opt/bugzilla/repo
+- configure apache to share htdocs as the document root
+- copy the contents of www/ into the htdocs directory
 - copy bz-dev.conf-sample to /etc/bz-def.conf and edit
-- share the www directory with apache (symlink, copy, bind mount, etc)
+- checkout the repo's you want to work on under the repo directory
+  eg.
+    /opt/bugzilla/repo/bugzilla/trunk
+    /opt/bugzilla/repo/bmo/4.2
+- (optional) source the bash_aliases script in your login script
 

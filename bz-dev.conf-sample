@@ -2,11 +2,11 @@
 # bz dev manager config
 #
 
-root_path   = "/opt/bugzilla"
-htdocs_path = "$root_path/htdocs"
-repo_path   = "$root_path/repo"
-yui2_path   = "$root_path/yui2"
-yui3_path   = "$root_path/yui3"
+bz_path     = "/opt/bz"                 # path to the bz script
+htdocs_path = "/opt/bugzilla/htdocs"
+repo_path   = "/opt/bugzilla/repo"
+yui2_path   = "/opt/bugzilla/yui2"
+yui3_path   = "/opt/bugzilla/yui3"
 
 default_bmo_repo    = "bmo/4.2"
 default_bmo_db      = "bugs_bmo_201312"
