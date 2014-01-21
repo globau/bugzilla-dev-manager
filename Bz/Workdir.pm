@@ -24,7 +24,6 @@ has bug         => ( is => 'lazy' );
 has repo        => ( is => 'rw', lazy => 1, coerce => \&_coerce_repo, isa => \&_isa_repo, builder => 1 );
 has repo_base   => ( is => 'lazy' );
 has db          => ( is => 'rw', lazy => 1, coerce => \&_coerce_db, builder => 1 );
-has dbh         => ( is => 'lazy' );
 
 use overload (
     '""' => sub { "instance " . $_[0]->dir }
@@ -132,9 +131,9 @@ sub _build_db {
     return ${ $s->varglob('db_name') };
 }
 
-sub _build_dbh {
-    my ($self) = @_;
-    return Bz->mysql->dbh($self->db);
+sub dbh {
+    my ($self) = shift;
+    return Bz->mysql->dbh($self->db, @_);
 }
 
 #
