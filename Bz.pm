@@ -8,8 +8,7 @@ use Cwd 'abs_path';
 use Data::Dumper;
 use File::Spec;
 
-BEGIN {
-    $Data::Dumper::Sortkeys = 1;
+sub init {
     $SIG{__DIE__} = sub {
         my $message = "@_";
         # urgh
@@ -20,8 +19,13 @@ BEGIN {
     $SIG{__WARN__} = sub {
         print Bz::Util::warn_coloured(@_);
     };
+    $Data::Dumper::Sortkeys = 1;
     binmode(STDOUT, ':utf8');
     binmode(STDERR, ':utf8');
+}
+
+BEGIN {
+    init();
 }
 
 sub import {

@@ -132,8 +132,20 @@ sub _build_db {
 }
 
 sub dbh {
-    my ($self) = shift;
+    my ($self) = @_;
     return Bz->mysql->dbh($self->db, @_);
+}
+
+sub bz_dbh {
+    my ($self) = @_;
+    chdir($self->path);
+    my $dbh;
+    eval '
+        use Bugzilla;
+        $dbh = Bugzilla->dbh;
+    ';
+    Bz->init(); # restore our SIG handlers
+    return $dbh;
 }
 
 #
