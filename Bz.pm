@@ -20,6 +20,8 @@ BEGIN {
     $SIG{__WARN__} = sub {
         print Bz::Util::warn_coloured(@_);
     };
+    binmode(STDOUT, ':utf8');
+    binmode(STDERR, ':utf8');
 }
 
 sub import {

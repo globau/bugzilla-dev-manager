@@ -2,6 +2,7 @@
 use FindBin qw($Bin);
 use lib $Bin;
 
+use 5.12.0;
 use Bz;
 use Bz::App;
 

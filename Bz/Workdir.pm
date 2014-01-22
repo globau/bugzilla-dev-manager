@@ -45,10 +45,10 @@ sub _build_summary {
     my ($self) = @_;
     return '' unless -d $self->path . '/data';
     if (-e $self->path . '/data/summary') {
-        return read_file($self->path . '/data/summary');
+        return read_file($self->path . '/data/summary', binmode => ':utf8');
     }
     my $summary = $self->bug ? $self->bug->summary : '';
-    write_file($self->path . '/data/summary', $summary);
+    write_file($self->path . '/data/summary', { binmode => ':utf8' }, $summary);
     return $summary;
 }
 
