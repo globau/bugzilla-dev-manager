@@ -7,7 +7,7 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "test [--verbose] [test number][..]";
+    return "bz test [--verbose] [test number][..]";
 }
 
 sub opt_spec {

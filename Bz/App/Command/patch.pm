@@ -8,7 +8,7 @@ sub abstract {
 
 sub usage_desc {
     # XXX support --all to include obsolete patches
-    return "bz %o [bug_id]";
+    return "bz patch [bug_id]";
 }
 
 sub description {

@@ -7,7 +7,7 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "commit <bug_id>";
+    return "bz commit <bug_id>";
 }
 
 sub validate_args {

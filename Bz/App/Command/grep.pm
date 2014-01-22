@@ -7,7 +7,7 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "bz %o <query>";
+    return "bz grep <query>";
 }
 
 sub opt_spec {

@@ -11,7 +11,7 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "bz <dir> [repo] [db]";
+    return "bz new <dir> [repo] [db]";
 }
 
 sub description {

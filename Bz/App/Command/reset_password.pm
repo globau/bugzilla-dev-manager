@@ -7,7 +7,7 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "reset_password <login>";
+    return "bz reset_password <login>";
 }
 
 sub description {

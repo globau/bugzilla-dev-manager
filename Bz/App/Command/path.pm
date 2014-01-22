@@ -7,7 +7,7 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "path [--repo] [dir]";
+    return "bz path [--repo] [dir]";
 }
 
 sub opt_spec {
@@ -21,7 +21,7 @@ sub description {
 prints the full path to the specified instance (or repo if --repo is specified).
 
 this is intended for use from shell aliases:
-  cd `bz path "$@"`
+  cd `bz path "\$@"`
 EOF
 }
 

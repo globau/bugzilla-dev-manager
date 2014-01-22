@@ -7,7 +7,7 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "bz [db]";
+    return "bz db [db]";
 }
 
 sub description {

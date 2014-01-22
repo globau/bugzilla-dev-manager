@@ -9,7 +9,7 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "diff [--quick] [--stdout] [--whitespace]";
+    return "bz diff [--quick] [--stdout] [--whitespace]";
 }
 
 sub opt_spec {
