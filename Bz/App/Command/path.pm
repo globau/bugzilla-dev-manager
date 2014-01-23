@@ -70,6 +70,8 @@ sub execute {
                     last;
                 }
             }
+            alert("no instances matching '" . join(' ', @$args) . "'")
+                unless $path;
         } elsif (my $workdir = eval { Bz->current_workdir() }) {
             # root path of current instance
             $path = $workdir->path;
