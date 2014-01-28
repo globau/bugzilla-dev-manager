@@ -8,14 +8,18 @@ sub abstract {
 
 sub execute {
     my ($self, $opt, $args) = @_;
-    my $workdir = Bz->current_workdir;
-
     my @info;
-    push @info, [ 'subdir',     coloured($workdir->dir, 'green') ];
-    push @info, [ 'summary',    coloured($workdir->summary || '-', 'green') ];
-    push @info, [ 'repo',       $workdir->repo ];
-    push @info, [ 'bzr',        $workdir->bzr_location ];
-    push @info, [ 'database',   $workdir->db ];
+    my $current = Bz->current;
+    if ($current->isa('Bz::Workdir')) {
+        push @info, [ 'subdir',     coloured($current->dir, 'green') ];
+        push @info, [ 'summary',    coloured($current->summary || '-', 'green') ];
+        push @info, [ 'repo',       $current->repo ];
+        push @info, [ 'bzr',        $current->bzr_location ];
+        push @info, [ 'database',   $current->db ];
+    } else {
+        push @info, [ 'dir',        coloured($current->dir, 'green') ];
+        push @info, [ 'location',   $current->bzr_location ];
+    }
 
     my $template = '';
     my @values;

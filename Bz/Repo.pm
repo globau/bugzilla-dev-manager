@@ -9,28 +9,22 @@ use IPC::System::Simple qw(EXIT_ANY capturex runx);
 
 has dir             => ( is => 'lazy' );
 has path            => ( is => 'lazy' );
-has bzr_branch      => ( is => 'lazy' );
 has bzr_location    => ( is => 'lazy' );
 
 use overload (
-    '""' => sub { "repo " . $_[0]->bzr_branch }
+    '""' => sub { "repo " . $_[0]->dir }
 );
 
 sub _build_dir {
     my ($self) = @_;
-    return basename($self->path);
+    my $repo_path = Bz->config->repo_path;
+    (my $dir = $self->path) =~ s/^\Q$repo_path\E\///;
+    return $dir;
 }
 
 sub _build_path {
     my ($self) = @_;
     return Bz->config->repo_path . '/' . $self->dir;
-}
-
-sub _build_bzr_branch {
-    my ($self) = @_;
-
-    (my $branch = $self->bzr_location) =~ s#^.+\bbzr\.mozilla\.org/##;
-    return $branch;
 }
 
 sub _build_bzr_location {
