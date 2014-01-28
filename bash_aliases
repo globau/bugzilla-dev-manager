@@ -15,4 +15,5 @@ function cdb() {
 
 function cdr() {
     cd `bz path --repo "$@"`
+    bz summary
 }
