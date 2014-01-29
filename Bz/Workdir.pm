@@ -15,7 +15,7 @@ use File::Find;
 use File::Path 'remove_tree';
 use File::Slurp;
 use Safe;
-use Test::Harness qw(&runtests);
+use Test::Harness ();
 
 has is_workdir  => ( is => 'ro', default => sub { 1 } );
 has dir         => ( is => 'ro', required => 1 );
@@ -349,11 +349,6 @@ sub test {
     my ($self, $opt, $args) = @_;
 
     $self->SUPER::test();
-    $self->run_tests($opt, $args);
-}
-
-sub run_tests {
-    my ($self, $opt, $args) = @_;
 
     chdir($self->path);
     my @test_files;
@@ -365,8 +360,16 @@ sub run_tests {
     } else {
         push @test_files, glob("t/*.t");
     }
+
+    $self->run_tests($opt, @test_files);
+}
+
+sub run_tests {
+    my ($self, $opt, @test_files) = @_;
+
+    chdir($self->path);
     $Test::Harness::verbose = $opt->verbose if $opt;
-    runtests(@test_files);
+    Test::Harness::runtests(@test_files);
 }
 
 sub delete {

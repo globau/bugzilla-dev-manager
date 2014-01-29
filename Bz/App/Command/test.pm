@@ -35,9 +35,9 @@ EOF
 sub execute {
     my ($self, $opt, $args) = @_;
 
-    my $current = Bz->current_workdir();
+    my $workdir = Bz->current_workdir();
     info("running tests");
-    $current->test($opt, $args);
+    $workdir->test($opt, $args);
 }
 
 1;
