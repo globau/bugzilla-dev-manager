@@ -7,12 +7,13 @@ use File::Find;
 use File::Slurp;
 use IPC::System::Simple qw(EXIT_ANY capturex runx);
 
+has is_workdir      => ( is => 'ro', default => sub { 0 } );
 has dir             => ( is => 'lazy' );
 has path            => ( is => 'lazy' );
 has bzr_location    => ( is => 'lazy' );
 
 use overload (
-    '""' => sub { "repo " . $_[0]->dir }
+    '""' => sub { $_[0]->dir }
 );
 
 sub _build_dir {
@@ -60,7 +61,7 @@ sub update {
 sub fix {
     my ($self) = @_;
     $self->fix_line_endings();
-    if ($self->isa('Bz::Repo')) {
+    if (!$self->is_workdir) {
         $self->revert_permissions();
     }
     $self->fix_permissions();

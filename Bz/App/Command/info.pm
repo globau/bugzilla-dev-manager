@@ -10,7 +10,7 @@ sub execute {
     my ($self, $opt, $args) = @_;
     my @info;
     my $current = Bz->current;
-    if ($current->isa('Bz::Workdir')) {
+    if ($current->is_workdir) {
         push @info, [ 'subdir',     coloured($current->dir, 'green') ];
         push @info, [ 'summary',    coloured($current->summary || '-', 'green') ];
         push @info, [ 'repo',       $current->repo ];

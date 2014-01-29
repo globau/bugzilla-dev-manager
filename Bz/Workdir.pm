@@ -17,6 +17,7 @@ use File::Slurp;
 use Safe;
 use Test::Harness qw(&runtests);
 
+has is_workdir  => ( is => 'ro', default => sub { 1 } );
 has dir         => ( is => 'ro', required => 1 );
 has summary     => ( is => 'lazy' );
 has bug_id      => ( is => 'lazy' );

@@ -28,7 +28,7 @@ sub execute {
     my ($self, $opt, $args) = @_;
     my $repo = Bz->current;
     die "unable to commit from a development instance\n"
-        if $repo->isa('Bz::Workdir');
+        if $repo->is_workdir;
 
     info("committing bug " . $args->[0]);
     my $bug = Bz->bug($args->[0]);

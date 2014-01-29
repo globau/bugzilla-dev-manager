@@ -24,15 +24,14 @@ sub execute {
     my ($self, $opt, $args) = @_;
 
     my $current = Bz->current();
-    my $is_workdir = $current->isa('Bz::Workdir');
-    my $bug_id = $is_workdir ? $current->bug_id : undef;
+    my $bug_id = $current->is_workdir ? $current->bug_id : undef;
     $bug_id ||= shift @$args;
     $bug_id = shift @$args if $bug_id eq 'bug';
     die $self->usage_error('missing bug_id') unless $bug_id;
 
     message("fetching patches from bug $bug_id");
     my $summary;
-    if ($is_workdir) {
+    if ($current->is_workdir) {
         $summary = $current->summary if $current->bug_id && $bug_id == $current->bug_id;
     }
     info($summary || Bz->bug($bug_id)->summary);
@@ -58,7 +57,7 @@ sub execute {
     info("patching " . $current->dir . " with #$attach_id");
     my $filename = $current->download_patch($attach_id);
     $current->apply_patch($filename);
-    if (!$is_workdir) {
+    if (!$current->is_workdir) {
         info("deleting $filename");
         unlink($filename);
     }
