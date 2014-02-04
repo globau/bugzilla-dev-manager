@@ -16,7 +16,7 @@ bugzilla_mozilla_org_login  = "glob@mozilla.com"
 
 base_url            = "http://bz/"
 attach_url          = "http://attach.bz/"
-modperl_url         = "http://mozperl.bz/"
+modperl_url         = "http://modperl.bz/"
 modperl_attach_url  = "http://attach.modperl.bz/"
 
 <localconfig>
