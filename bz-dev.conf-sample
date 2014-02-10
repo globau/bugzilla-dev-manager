@@ -60,6 +60,8 @@ modperl_attach_url  = "http://attach.modperl.bz/"
     user_info_class                     = "Persona,CGI"
 </params_bmo>
 
+bmo_username = "glob@mozilla.com"
+
 never_disable_bugmail = "glob@mozilla.com"
 never_disable_bugmail = "byron.jones@gmail.com"
 

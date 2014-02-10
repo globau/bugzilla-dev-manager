@@ -33,17 +33,34 @@ sub execute {
     info("committing bug " . $args->[0]);
     my $bug = Bz->bug($args->[0]);
     $repo->test();
-    my $message = 'Bug ' . $bug->id . ': ' . $bug->summary;
+    info('Bug ' . $bug->id . ': ' . $bug->summary);
 
     chdir($repo->path);
     $repo->bzr('st');
-    info(sprintf("bzr commit --fixes mozilla:%s -m '%s'", $bug->id, $message));
-    return unless confirm("commit?");
-    $repo->bzr(
+
+    my @args = (
         'commit',
         '--fixes', 'mozilla:' . $bug->id,
+    );
+    info('bzr commit');
+    info('  ' . $args[-2] . ' ' . $args[-1]);
+
+    my $author = '';
+    if (lc($bug->assignee) ne lc(Bz->config->bmo_username)) {
+        my $user = Bz->bugzilla->user($bug->assignee);
+        push @args, (
+            "--author=" . $user->{name} . " <" . $bug->assignee . ">",
+        );
+        info('  ' . $args[-1]);
+    }
+
+    push @args, (
         '-m', 'Bug ' . $bug->id . ': ' . $bug->summary,
     );
+    info('  -m "' . $args[-1] . '"');
+
+    return unless confirm("commit?");
+    $repo->bzr(@args);
 }
 
 1;

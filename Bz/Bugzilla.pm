@@ -87,6 +87,24 @@ sub bugs {
     return \@response;
 }
 
+sub user {
+    my ($self, $login) = @_;
+    die "missing login" unless $login;
+
+    my $response = $self->_rpc(
+        'User.get',
+        {
+            names => [ $login ],
+            include_fields => [ 'name', 'real_name' ],
+        }
+    )->{users};
+    return unless $response && @$response;
+    return {
+        login   => $response->[0]->{name},
+        name    => $response->[0]->{real_name},
+    };
+}
+
 sub attachments {
     my ($self, $bug_id) = @_;
     die "missing bug_id" unless $bug_id;
