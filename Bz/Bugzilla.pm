@@ -136,7 +136,7 @@ sub _rpc {
 
     if (!$self->_authenticated) {
         my $login = Bz->config->bugzilla_mozilla_org_login;
-        info("password for $login on  bugzilla.mozilla.org required:");
+        info("password for $login on bugzilla.mozilla.org required:");
         my $password = password("passsword:");
         $self->_call(
             'User.login',
@@ -164,12 +164,15 @@ sub _call {
 
 sub _is_authenticated {
     my ($self) = @_;
-    my $response = $self->_call(
-        'User.valid_login',
-        {
-            login   => Bz->config->bugzilla_mozilla_org_login,
-        }
-    );
+    my $response = eval {
+        $self->_call(
+            'User.valid_login',
+            {
+                login   => Bz->config->bugzilla_mozilla_org_login,
+            }
+        );
+        1;
+    };
     return $response ? 1 : 0;
 }
 
