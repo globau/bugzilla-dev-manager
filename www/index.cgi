@@ -21,6 +21,8 @@ use CGI;
 use CGI::Carp 'fatalsToBrowser';
 use Template;
 
+use constant USE_MULTIPART => 1;
+
 my $cgi = CGI->new();
 if ($cgi->param('delete') && $cgi->param('dir')) {
     print $cgi->header(-type => 'text/plain');
@@ -31,16 +33,12 @@ if ($cgi->param('delete') && $cgi->param('dir')) {
 }
 
 my $template = Template->new({
-    ABSOLUTE => 1,
-    STRICT => 1,
-    PRE_CHOMP => 1,
-    TRIM => 1,
-    ENCODING => 'UTF-8',
+    ABSOLUTE    => 1,
+    STRICT      => 1,
+    PRE_CHOMP   => 1,
+    TRIM        => 1,
+    ENCODING    => 'UTF-8',
     FILTERS => {
-        nbsp => sub {
-            my ($value) = @_;
-            return $value eq '' ? '&nbsp;' : $value;
-        },
         js => sub {
             my ($value) = @_;
             $value =~ s/([\\\'\"\/])/\\$1/g;
@@ -66,9 +64,10 @@ my $template = Template->new({
     },
 });
 
-print $cgi->multipart_init();
-print $cgi->multipart_start(-type => 'text/html; charset=UTF-8');
-print <<'EOF';
+if (USE_MULTIPART) {
+    print $cgi->multipart_init();
+    print $cgi->multipart_start(-type => 'text/html; charset=UTF-8');
+    print <<'EOF';
 <!doctype html>
 <html>
 <head>
@@ -86,7 +85,10 @@ loading...
 </body>
 </html>
 EOF
-print $cgi->multipart_end();
+    print $cgi->multipart_end();
+} else {
+    print $cgi->header(-type => 'text/html; charset=UTF-8');
+}
 
 my $workdirs = Bz->workdirs;
 Bz->preload_bugs($workdirs);
@@ -98,12 +100,16 @@ $workdirs = [
     } @$workdirs
 ];
 
-print $cgi->multipart_start(-type => 'text/html; charset=UTF-8');
+if (USE_MULTIPART) {
+    print $cgi->multipart_start(-type => 'text/html; charset=UTF-8');
+}
 
 $template->process(\*DATA, { workdirs => $workdirs })
     or die($template->error() . "\n");
 
-print $cgi->multipart_final();
+if (USE_MULTIPART) {
+    print $cgi->multipart_final();
+}
 
 __DATA__
 <!doctype html>
@@ -200,7 +206,7 @@ function delete_instance(dir, summary) {
         </td>
         <td>
             <a href="#" class="delete"
-               onclick="return delete_instance('[% workdir.dir | js%]', '[% workdir.summary | js %]')">x</a>
+               onclick="return delete_instance('[% workdir.dir | js | html %]', '[% workdir.summary | js | html %]')">x</a>
         </td>
         <td nowrap>
             [% bug.product | product | html %]
