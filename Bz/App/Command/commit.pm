@@ -12,6 +12,7 @@ sub usage_desc {
 
 sub validate_args {
     my ($self, $opt, $args) = @_;
+    shift @$args if @$args && $args->[0] eq 'bug';
     $self->usage_error("missing <bug_id>") unless @$args;
 }
 
