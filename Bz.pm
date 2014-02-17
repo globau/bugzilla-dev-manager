@@ -67,7 +67,9 @@ sub boiler_plate {
 
 sub current_workdir {
     require Bz::Workdir;
-    my $path = abs_path('.') . '/';
+    my $path = abs_path('.')
+        or die "failed to find current working directory\n";
+    $path .= '/';
     die "invalid working directory\n"
         unless $path =~ m#/htdocs/([^/]+)/#;
     return Bz::Workdir->new({ dir => $1 });
@@ -75,7 +77,8 @@ sub current_workdir {
 
 sub current_repo {
     require Bz::Repo;
-    my $path = abs_path('.');
+    my $path = abs_path('.')
+        or die "failed to find current working directory\n";
     while (!-d "$path/.bzr") {
         my @dirs = File::Spec->splitdir($path);
         pop @dirs;
