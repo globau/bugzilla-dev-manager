@@ -47,7 +47,9 @@ sub execute {
     info('  ' . $args[-2] . ' ' . $args[-1]);
 
     my $author = '';
-    if (lc($bug->assignee) ne lc(Bz->config->bmo_username)) {
+    if (lc($bug->assignee) ne lc(Bz->config->bmo_username)
+        && $bug->assignee ne 'nobody@mozilla.org'
+    ) {
         my $user = Bz->bugzilla->user($bug->assignee);
         push @args, (
             "--author=" . $user->{name} . " <" . $bug->assignee . ">",
