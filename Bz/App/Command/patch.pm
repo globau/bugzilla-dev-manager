@@ -29,9 +29,12 @@ sub execute {
     my ($self, $opt, $args) = @_;
 
     my $current = Bz->current();
-    my $source = $current->is_workdir ? $current->bug_id : undef;
-    $source ||= shift @$args;
-    $source = shift @$args if $source eq 'bug';
+    my $source;
+    if (@$args) {
+        $source = shift @$args;
+        $source = shift @$args if $source eq 'bug';
+    }
+    $source ||= $current->is_workdir ? $current->bug_id : undef;
     die $self->usage_error('missing bug_id or source') unless $source;
 
     my $filename;
