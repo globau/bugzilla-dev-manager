@@ -23,8 +23,10 @@ sub execute {
     my ($self, $opt, $args) = @_;
 
     my $current = Bz->current();
-    my @files = grep { !Bz->boiler_plate->exists($_) } $current->added_files();
-    die "no new files with missing boiler-plates\n" unless @files;
+    my @files = @$args
+        ? @$args
+        : grep { !Bz->boiler_plate->exists($_) } $current->added_files();
+    die "no files with missing boiler-plates\n" unless @files;
 
     warning("add boiler-plate to:");
     foreach my $file (@files) {
