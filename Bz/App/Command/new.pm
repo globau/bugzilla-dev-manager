@@ -44,10 +44,12 @@ sub execute {
         info(sprintf("Bug %s: %s", $bug->id, $bug->summary));
     }
 
-    # use bmo defaults if just 'bmo' is provided
+    # use bmo defaults if just 'bmo' is provided, likewise for 'trunk'
     my ($repo, $db);
     if (scalar(@$args) == 1 && $args->[0] eq 'bmo') {
         ($repo, $db) = ($config->default_bmo_repo, $config->default_bmo_db);
+    } elsif (scalar(@$args) == 1 && $args->[0] eq 'trunk') {
+        ($repo, $db) = ('trunk', 'trunk');
     } else {
         ($repo, $db) = @$args;
     }
