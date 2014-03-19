@@ -44,7 +44,7 @@ sub execute {
     info('Bug ' . $bug->id . ': ' . $bug->summary);
 
     chdir($repo->path);
-    $repo->git(qw(diff --staged --name-status));
+    $repo->git(qw(diff --staged --stat));
 
     print "\n";
     my @args = (
