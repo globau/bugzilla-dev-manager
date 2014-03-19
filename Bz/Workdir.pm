@@ -374,7 +374,7 @@ sub run_tests {
 sub delete {
     my ($self) = @_;
     chdir(Bz->config->htdocs_path);
-    remove_tree($self->dir, { safe => 1 });
+    remove_tree($self->dir);
 }
 
 1;
