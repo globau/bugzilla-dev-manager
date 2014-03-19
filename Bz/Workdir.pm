@@ -23,7 +23,6 @@ has summary     => ( is => 'lazy' );
 has bug_id      => ( is => 'lazy' );
 has bug         => ( is => 'lazy' );
 has repo        => ( is => 'rw', lazy => 1, coerce => \&_coerce_repo, isa => \&_isa_repo, builder => 1 );
-has repo_base   => ( is => 'lazy' );
 has db          => ( is => 'rw', lazy => 1, coerce => \&_coerce_db, builder => 1 );
 
 use overload (
@@ -95,22 +94,19 @@ sub _isa_repo {
 
 sub _build_repo {
     my ($self) = @_;
-    my $repo = '';
-    my $file = $self->path . '/.bzr/branch/branch.conf';
-    if (-e $file) {
-        my $conf = read_file($file);
-        if ($conf =~ m#bzr\.mozilla\.org/((bugzilla|bmo)/.+)#) {
-            $repo = $1;
-            $repo =~ s/(^\s+|\s+$)//g;
-            $repo =~ s#/$##;
-        }
+    if ($self->url =~ m#webtools/bmo/bugzilla\.git$#) {
+        return 'bmo/' . $self->branch;
+    } else {
+        return 'bugzilla/' . $self->branch;
     }
-    return $repo;
+    return '';
 }
 
-sub _build_repo_base {
+sub _build_url {
     my ($self) = @_;
-    return (split('/', $self->repo))[0];
+    my $repo = $self->git(qw(config --local --get remote.origin.url));
+    chomp($repo);
+    return $repo;
 }
 
 sub _coerce_db {
@@ -274,7 +270,7 @@ sub fix_params {
         $params{$name} = $config->params->$name;
     }
 
-    if ($self->repo_base eq 'bmo') {
+    if ($self->url =~ m#webtools/bmo/bugzilla\.git$#) {
         foreach my $name ($config->params_bmo->_names) {
             $params{$name} = $config->params_bmo->$name;
         }
@@ -298,12 +294,13 @@ sub fix_params {
         'background: url(%sbkg_warning.png) repeat-y scroll left top #fff9db;' .
         'color: #666458;' .
         'padding: 5px 5px 5px 19px;' .
-        '">%s (%s) %s</div>',
+        '">%s (%s %s) %s</div>',
         $config->base_url,
         ($id
             ? qq#<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=$id"><b>Bug $id</b></a>#
             : "<b>" . $self->dir . "</b>"
         ),
+        $self->repo,
         $self->db,
         CGI::escapeHTML($self->summary),
     );
@@ -326,7 +323,7 @@ sub fix_permissions {
     $self->SUPER::fix_permissions();
     my @spec = glob('*');
     push @spec, '.htaccess';
-    push @spec, '.bzr' if -d ".bzr";
+    push @spec, '.git' if -d '.git';
 
     my $user = getpwuid($>);
     system("chgrp -R --silent " . Bz->config->localconfig->webservergroup . " @spec");

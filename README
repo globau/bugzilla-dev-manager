@@ -12,3 +12,12 @@ installation
     /opt/bugzilla/repo/bmo/4.2
 - (optional) source the bash_aliases script in your login script
 
+workflow
+- use 'bz new <bug_id> [repo] [db]
+- fix bugs
+- add files to git's staging area ('git add <file>[..]')
+- run 'bz diff' to run tests and generate a patch
+- attach patch to bugzilla bug for review
+- if further work required, update, 'git add', 'bz diff'
+- if ready for commit, run 'bz commit'
+

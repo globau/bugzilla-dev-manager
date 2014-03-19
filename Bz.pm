@@ -71,7 +71,8 @@ sub current_workdir {
         or die "failed to find current working directory\n";
     $path .= '/';
     die "invalid working directory\n"
-        unless $path =~ m#/htdocs/([^/]+)/#;
+        unless $path =~ m#/htdocs/([^/]+)/#
+        && -e "$path/Bugzilla.pm";
     return Bz::Workdir->new({ dir => $1 });
 }
 
@@ -79,12 +80,14 @@ sub current_repo {
     require Bz::Repo;
     my $path = abs_path('.')
         or die "failed to find current working directory\n";
-    while (!-d "$path/.bzr") {
+    while (!-d "$path/.bzr" && !-d "$path/.git") {
         my @dirs = File::Spec->splitdir($path);
         pop @dirs;
         $path = File::Spec->catdir(@dirs);
         die "invalid working directory\n" if $path eq '/';
     }
+    die "invalid working directory\n"
+        unless -e "$path/Bugzilla.pm";
     return Bz::Repo->new({ path => $path });
 }
 

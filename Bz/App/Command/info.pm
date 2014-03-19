@@ -14,11 +14,13 @@ sub execute {
         push @info, [ 'subdir',     coloured($current->dir, 'green') ];
         push @info, [ 'summary',    coloured($current->summary || '-', 'green') ];
         push @info, [ 'repo',       $current->repo ];
-        push @info, [ 'bzr',        $current->bzr_location ];
+        push @info, [ 'url',        $current->url ];
+        push @info, [ 'branch',     $current->branch ];
         push @info, [ 'database',   $current->db ];
     } else {
         push @info, [ 'dir',        coloured($current->dir, 'green') ];
-        push @info, [ 'location',   $current->bzr_location ];
+        push @info, [ 'url',        $current->url ];
+        push @info, [ 'branch',     $current->branch ];
     }
 
     my $template = '';

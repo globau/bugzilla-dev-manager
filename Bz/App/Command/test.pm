@@ -21,7 +21,7 @@ sub description {
 performs sanity checking, and if appropriate runs the bugzilla test suite.
 
 if the current directory is a repository checkout, then just a set of simple
-checks are performed (checking for tabs, new files not added to bzr, common
+checks are performed (checking for tabs, new files not added to git, common
 mistakes, etc).
 
 if the current directory is a working instance, then the bugzilla test suite
