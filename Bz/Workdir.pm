@@ -72,6 +72,7 @@ sub _coerce_repo {
     my $repo = lc($_[0] || '');
     $repo =~ s#(^\s+|\s+$)##g;
     $repo =~ s#^repo[\\|/]##;
+    $repo = 'bugzilla/trunk' if $repo eq 'bugzilla/master';
     return $repo;
 }
 
@@ -96,10 +97,11 @@ sub _build_repo {
     my ($self) = @_;
     if ($self->url =~ m#webtools/bmo/bugzilla\.git$#) {
         return 'bmo/' . $self->branch;
-    } else {
+    } elsif ($self->url =~ m#bugzilla/bugzilla\.git$#) {
         return 'bugzilla/' . $self->branch;
+    } else {
+        return '';
     }
-    return '';
 }
 
 sub _build_url {

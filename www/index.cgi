@@ -21,6 +21,8 @@ use CGI;
 use CGI::Carp 'fatalsToBrowser';
 use Template;
 
+$SIG{__DIE__} = \&CGI::Carp::confess;
+
 use constant USE_MULTIPART => 1;
 
 my $cgi = CGI->new();
