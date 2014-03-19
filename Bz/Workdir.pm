@@ -32,7 +32,7 @@ use overload (
 sub BUILD {
     my ($self, $args) = @_;
     return if $args->{ignore_error};
-    die "unvalid directory '" . $self->dir . "'\n"
+    die "invalid directory '" . $self->dir . "'\n"
         unless -e $self->path . '/localconfig';
 }
 
