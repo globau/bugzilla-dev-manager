@@ -12,7 +12,7 @@ sub usage_desc {
 
 sub opt_spec {
     return (
-        [ "me", "ignore bug assginee when setting the patch author" ],
+        [ "me", "ignore bug assignee when setting the patch author" ],
     );
 }
 
