@@ -161,46 +161,46 @@ sub delete_crud {
     }
 }
 
+sub modified_files {
+    my ($self) = @_;
+
+    chdir($self->path);
+    my @files;
+    foreach my $line ($self->git(qw(status --porcelain))) {
+        chomp $line;
+        if ($line =~ /^.M (.+)$/) {
+            push @files, $1;
+        }
+    }
+    return @files;
+}
+
 sub staged_files {
     my ($self) = @_;
 
     chdir($self->path);
-    my @staged_files;
+    my @files;
     foreach my $line ($self->git(qw(status --porcelain))) {
         chomp $line;
         if ($line =~ /^[^ \?]. (.+)$/) {
-            push @staged_files, $1;
+            push @files, $1;
         }
     }
-    return @staged_files;
-}
-
-sub committed_files {
-    my ($self) = @_;
-
-    chdir($self->path);
-    my @committed_files;
-    foreach my $line ($self->git(qw(status --porcelain))) {
-        chomp $line;
-        if ($line =~ /^.[^ \?] (.+)$/) {
-            push @committed_files, $1;
-        }
-    }
-    return @committed_files;
+    return @files;
 }
 
 sub added_files {
     my ($self) = @_;
 
     chdir($self->path);
-    my @added_files;
+    my @files;
     foreach my $line ($self->git(qw(status --porcelain))) {
         chomp $line;
         if ($line =~ /^A  (.+)$/) {
-            push @added_files, $1;
+            push @files, $1;
         }
     }
-    return @added_files;
+    return @files;
 }
 
 sub test {

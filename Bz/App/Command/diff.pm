@@ -37,6 +37,15 @@ sub execute {
     die "no files are staged\n"
         unless $workdir->staged_files();
 
+    $workdir->unfix();
+    if (my @files = $workdir->modified_files) {
+        alert("the following file" . (scalar(@files) == 1 ? ' is' : 's are') . " modified but not staged:");
+        foreach my $file (@files) {
+            warning($file);
+        }
+    }
+    $workdir->fix();
+
     if (!$opt->quick) {
         my @missing;
         foreach my $file (grep { -T $_ } $workdir->added_files()) {
