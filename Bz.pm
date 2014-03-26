@@ -67,17 +67,27 @@ sub boiler_plate {
 
 sub current_workdir {
     require Bz::Workdir;
-    my $path = abs_path('.')
-        or die "failed to find current working directory\n";
-    $path .= '/';
+    my $path = _current_path();
     die "invalid working directory\n"
-        unless $path =~ m#/htdocs/([^/]+)/#
-        && -e "$path/Bugzilla.pm";
+        unless "$path/" =~ m#/htdocs/([^/]+)/#;
     return Bz::Workdir->new({ dir => $1 });
 }
 
 sub current_repo {
     require Bz::Repo;
+    return Bz::Repo->new({ path => _current_path() });
+}
+
+sub current {
+    my ($class) = @_;
+    my $current = eval { $class->current_workdir() };
+    return $current if $current;
+    $current = eval { $class->current_repo() };
+    return $current if $current;
+    die "invalid working directory\n";
+}
+
+sub _current_path {
     my $path = abs_path('.')
         or die "failed to find current working directory\n";
     while (!-d "$path/.bzr" && !-d "$path/.git") {
@@ -88,16 +98,7 @@ sub current_repo {
     }
     die "invalid working directory\n"
         unless -e "$path/Bugzilla.pm";
-    return Bz::Repo->new({ path => $path });
-}
-
-sub current {
-    my ($class) = @_;
-    my $current = eval { $class->current_workdir() };
-    return $current if $current;
-    $current = eval { $class->current_repo() };
-    return $current if $current;
-    die "invalid working directory\n";
+    return $path;
 }
 
 my $_workdirs;
