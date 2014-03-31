@@ -19,7 +19,6 @@ sub opt_spec {
 sub validate_args {
     my ($self, $opt, $args) = @_;
     shift @$args if @$args && $args->[0] eq 'bug';
-    $self->usage_error("missing <bug_id>") unless @$args;
 }
 
 sub description {
@@ -38,8 +37,17 @@ sub execute {
     die "no files are staged\n"
         unless $repo->staged_files();
 
-    info("committing bug " . $args->[0]);
-    my $bug = Bz->bug($args->[0]);
+    my $bug_id;
+    if ($repo->can('bug_id')) {
+        $bug_id = $repo->bug_id;
+    } else {
+        $bug_id = shift @$args;
+    }
+    $self->usage_error("missing <bug_id>")
+        unless $bug_id;
+
+    info("committing bug $bug_id");
+    my $bug = Bz->bug($bug_id);
     $repo->test();
     info('Bug ' . $bug->id . ': ' . $bug->summary);
 
