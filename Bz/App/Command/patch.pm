@@ -10,8 +10,19 @@ sub abstract {
 }
 
 sub usage_desc {
-    # XXX support --all to include obsolete patches
-    return "bz patch [bug_id|source_url]";
+    return "bz patch [bug_id|source_url] [--all] [--download]";
+}
+
+sub opt_spec {
+    return (
+        [ "all|a",        "list all patches" ],
+        [ "download|d",   "download patch, but don't apply" ],
+    );
+}
+
+sub validate_args {
+    my ($self, $opt, $args) = @_;
+    shift @$args if @$args && $args->[0] eq 'bug';
 }
 
 sub description {
@@ -30,10 +41,8 @@ sub execute {
 
     my $current = Bz->current();
     my $source;
-    if (@$args) {
-        $source = shift @$args;
-        $source = shift @$args if $source eq 'bug';
-    }
+    $source = shift @$args
+        if @$args;
     $source ||= $current->is_workdir ? $current->bug_id : undef;
     die $self->usage_error('missing bug_id or source') unless $source;
 
@@ -61,17 +70,23 @@ sub execute {
         }
         info($summary || Bz->bug($bug_id)->summary);
 
-        my @patches = (
-            grep { $_->{is_patch} && !$_->{is_obsolete} }
-            @{ Bz->bugzilla->attachments($bug_id) }
-        );
+        my @patches = @{ Bz->bugzilla->attachments($bug_id) };
+        if (!$opt->all) {
+            @patches = grep { $_->{is_patch} && !$_->{is_obsolete} } @patches;
+        }
         die "no patches found\n" unless @patches;
         die "too many patches found\n" if scalar(@patches) > 10;
 
         my $prompt = "  0. cancel\n";
         my $re = '0';
         for(my $i = 1; $i <= scalar @patches; $i++) {
-            $prompt .= sprintf(" %2s. %s\n", $i, $patches[$i - 1]->{summary});
+            my $patch = $patches[$i - 1];
+            $prompt .= sprintf(
+                " %2s. %s %s\n",
+                $i,
+                $patch->{summary},
+                ($opt->all && $patch->{is_obsolete} ? '[obsolete]' : ''),
+            );
             $re .= "$i";
         }
         $prompt .= '? ';
@@ -79,14 +94,18 @@ sub execute {
         exit if $no == 0;
         my $attach_id = $patches[$no - 1]->{id};
 
-        info("patching " . $current->dir . " with #$attach_id");
+        if (!$opt->download) {
+            info("patching " . $current->dir . " with #$attach_id");
+        }
         $filename = $current->download_patch($attach_id);
     }
 
-    $current->apply_patch($filename);
-    if (!$current->is_workdir) {
-        info("deleting $filename");
-        unlink($filename);
+    if (!$opt->download) {
+        $current->apply_patch($filename);
+        if (!$current->is_workdir) {
+            info("deleting $filename");
+            unlink($filename);
+        }
     }
 }
 
