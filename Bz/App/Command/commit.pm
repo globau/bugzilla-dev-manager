@@ -41,7 +41,7 @@ sub execute {
         unless @staged || @committed;
 
     my $bug_id;
-    if ($repo->can('bug_id')) {
+    if ($repo->is_workdir) {
         $bug_id = $repo->bug_id;
     } else {
         $bug_id = shift @$args;

@@ -340,16 +340,13 @@ sub download_patch {
     my $attachment = Bz->bugzilla->attachment($attach_id);
     message(sprintf("Bug %s: %s", $attachment->{bug_id}, $attachment->{description} || $attachment->{summary}));
     die "attachment is not a patch\n" unless $attachment->{is_patch} == '1';
-    if ($attachment->{is_obsolete} == '1') {
-        return unless confirm('attachment is obsolete, continue?');
-    }
 
     my $bug_id = $attachment->{bug_id};
     my $filename = "$bug_id-$attach_id.patch";
     my $content = $attachment->{data};
     $content =~ s/\015\012/\012/g;
 
-    if ($self->can('bug_id') && $self->bug_id && $self->bug_id != $bug_id) {
+    if ($self->is_workdir && $self->bug_id && $self->bug_id != $bug_id) {
         my $summary = Bz::Bug->new({ id => $bug_id })->summary;
         exit unless confirm("the patch from a different bug:\nBug $bug_id: $summary\ncontinue?");
     }
