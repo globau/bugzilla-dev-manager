@@ -63,6 +63,8 @@ sub execute {
     }
     print "\n";
 
+    $repo->git(qw(config --get remote.origin.url));
+
     if (@staged) {
         my @args = (
             'commit',
