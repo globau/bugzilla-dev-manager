@@ -161,6 +161,20 @@ sub delete_crud {
     }
 }
 
+sub new_files {
+    my ($self) = @_;
+
+    chdir($self->path);
+    my @files;
+    foreach my $line ($self->git(qw(status --porcelain))) {
+        chomp $line;
+        if ($line =~ /^\?\? (.+)$/) {
+            push @files, $1;
+        }
+    }
+    return @files;
+}
+
 sub modified_files {
     my ($self) = @_;
 

@@ -10,22 +10,26 @@ sub execute {
     my ($self, $opt, $args) = @_;
     my $current = Bz->current;
 
-    info("staging modified files");
+    info("staging new or modified files");
 
     $current->unfix()
         if $current->is_workdir;
 
-    my @files = $current->modified_files();
-    if (!@files) {
-        alert("no modified files");
+    my @new = $current->new_files();
+    my @modified = $current->modified_files();
+
+    @new = grep { !/\.patch$/ } @new;
+
+    unless (@new || @modified) {
+        alert("no new or modified files");
     } else {
-        alert("modified file" . (scalar(@files) == 1 ? '' : 's') . ":");
-        foreach my $file (@files) {
-            warning($file);
-        }
-        while (my $key = lc(prompt('stage [y/n/d]?', qr/[ynd]/i))) {
+        my @files = (@modified, @new);
+        list(\@new, \@modified);
+        while (my $key = lc(prompt('stage [y/n/d/l]?', qr/[yndl]/i))) {
             if ($key eq 'd') {
                 $current->git('diff');
+            } elsif ($key eq 'l') {
+                list(\@new, \@modified);
             } else {
                 $current->git('add', @files)
                     if $key eq 'y';
@@ -36,6 +40,22 @@ sub execute {
 
     $current->fix()
         if $current->is_workdir;
+}
+
+sub list {
+    my ($new, $modified) = @_;
+    if (@$new) {
+        alert("new file" . (scalar(@$new) == 1 ? '' : 's') . ":");
+        foreach my $file (@$new) {
+            warning($file);
+        }
+    }
+    if (@$modified) {
+        alert("modified file" . (scalar(@$modified) == 1 ? '' : 's') . ":");
+        foreach my $file (@$modified) {
+            warning($file);
+        }
+    }
 }
 
 1;
