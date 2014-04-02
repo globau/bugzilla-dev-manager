@@ -189,6 +189,20 @@ sub staged_files {
     return @files;
 }
 
+sub committed_files {
+    my ($self) = @_;
+
+    chdir($self->path);
+    my @files;
+    foreach my $line ($self->git('diff', '--name-status', 'origin/' . $self->branch, $self->branch)) {
+        chomp $line;
+        if ($line =~ /^M\s+(.+)$/) {
+            push @files, $1;
+        }
+    }
+    return @files;
+}
+
 sub added_files {
     my ($self) = @_;
 
