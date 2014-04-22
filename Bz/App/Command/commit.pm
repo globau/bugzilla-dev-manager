@@ -7,12 +7,13 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "bz commit <bug_id> [--me]";
+    return "bz commit <bug_id> [--me][--quick]";
 }
 
 sub opt_spec {
     return (
         [ "me", "ignore bug assignee when setting the patch author" ],
+        [ "quick|q", "don't run tests before committing" ],
     );
 }
 
@@ -51,7 +52,8 @@ sub execute {
 
     info("committing bug $bug_id");
     my $bug = Bz->bug($bug_id);
-    $repo->test();
+    $repo->test()
+        unless $opt->quick;
     info('Bug ' . $bug->id . ': ' . $bug->summary);
 
     chdir($repo->path);
