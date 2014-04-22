@@ -4,6 +4,7 @@ use Bz;
 
 use LWP::Simple;
 use URI;
+use URI::QueryParam;
 
 sub abstract {
     return "downloads and applies a patch";
@@ -56,8 +57,16 @@ sub execute {
         } else {
             $filename = $uri->host;
         }
-        $filename ||= 'download.patch';
-        $filename .= '.patch' unless $filename =~ /\./;
+        if ($filename eq 'attachment.cgi') {
+            if ($current->is_workdir) {
+                $filename = $current->bug_id . '-' . $uri->query_param('id') . '.patch';
+            } else {
+                $filename = $uri->query_param('id') . '.patch';
+            }
+        } else {
+            $filename ||= 'download.patch';
+            $filename .= '.patch' unless $filename =~ /\./;
+        }
         message("downloading $uri to $filename");
         getstore($uri, $filename);
 
