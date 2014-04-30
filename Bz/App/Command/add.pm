@@ -18,7 +18,7 @@ sub execute {
     my @new = $current->new_files();
     my @modified = $current->modified_files();
 
-    @new = grep { !/\.patch$/ } @new;
+    @new = grep { !/\.(patch|orig)$/ } @new;
 
     unless (@new || @modified) {
         alert("no new or modified files");
