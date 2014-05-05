@@ -48,6 +48,9 @@ sub execute {
                     }
                 }
             }
+
+            $path
+              || warning("failed to find repo: $repo");
         } elsif (my $repo = eval { Bz->current_repo() }) {
             # root path of current repo
             $path = $repo->path;
