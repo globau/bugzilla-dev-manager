@@ -59,18 +59,39 @@ sub execute {
 
     } else {
         if (@$args) {
-            # workdir substring match
-            foreach my $workdir (@{ Bz->workdirs() }) {
-                my $match = 1;
-                foreach my $word (@$args) {
-                    if ($workdir->dir !~ /\Q$word\E/i && $workdir->summary !~ /\Q$word\E/i) {
-                        $match = 0;
+            # dir match
+            if (scalar(@$args) == 1) {
+                my $dir = $args->[0];
+                foreach my $workdir (@{ Bz->workdirs() }) {
+                    if ($workdir->dir eq $dir) {
+                        $path = $workdir->path;
                         last;
                     }
                 }
-                if ($match) {
-                    $path = $workdir->path;
-                    last;
+                if (!$path) {
+                    $dir =~ s/[\- \/]/_/g;
+                    foreach my $workdir (@{ Bz->workdirs() }) {
+                        if ($workdir->dir eq $dir) {
+                            $path = $workdir->path;
+                            last;
+                        }
+                    }
+                }
+            }
+            if (!$path) {
+                # workdir substring match
+                foreach my $workdir (@{ Bz->workdirs() }) {
+                    my $match = 1;
+                    foreach my $word (@$args) {
+                        if ($workdir->dir !~ /\Q$word\E/i && $workdir->summary !~ /\Q$word\E/i) {
+                            $match = 0;
+                            last;
+                        }
+                    }
+                    if ($match) {
+                        $path = $workdir->path;
+                        last;
+                    }
                 }
             }
             alert("no instances matching '" . join(' ', @$args) . "'")
