@@ -15,7 +15,7 @@ function cdb() {
 
 function cdr() {
     P=`bz path --repo "$@"`
-    if [ $? ] ; then
+    if (( $? == 1 )) ; then
         T=`bz path "$@"`
         if (( $? == 0 )); then
             P=$T
