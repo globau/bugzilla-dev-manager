@@ -29,6 +29,7 @@ sub execute {
     my ($self, $opt, $args) = @_;
 
     my $path;
+    my $fallback = 0;
 
     if ($opt->repo) {
         if (@$args) {
@@ -55,7 +56,10 @@ sub execute {
             # root path of current repo
             $path = $repo->path;
         }
-        $path ||= Bz->config->repo_path;
+        if (!$path) {
+            $fallback = 1;
+            $path = Bz->config->repo_path;
+        }
 
     } else {
         if (@$args) {
@@ -100,10 +104,14 @@ sub execute {
             # root path of current instance
             $path = $workdir->path;
         }
-        $path ||= Bz->config->htdocs_path;
+        if (!$path) {
+            $fallback = 1;
+            $path = Bz->config->htdocs_path;
+        }
     }
 
     print $path, "\n";
+    exit(1) if $fallback;
 }
 
 1;

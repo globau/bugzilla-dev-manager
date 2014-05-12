@@ -14,6 +14,13 @@ function cdb() {
 }
 
 function cdr() {
-    cd `bz path --repo "$@"`
+    P=`bz path --repo "$@"`
+    if [ $? ] ; then
+        T=`bz path "$@"`
+        if (( $? == 0 )); then
+            P=$T
+        fi
+    fi
+    cd $P
     bz summary
 }
