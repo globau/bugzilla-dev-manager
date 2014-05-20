@@ -41,6 +41,9 @@ sub execute {
     die "no files are staged or committed\n"
         unless @staged || @committed;
 
+    die "refusing to commit to the production branch\n"
+        if $repo->branch eq 'production';
+
     my $bug_id;
     if ($repo->is_workdir) {
         $bug_id = $repo->bug_id;
