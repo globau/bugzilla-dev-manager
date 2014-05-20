@@ -27,6 +27,9 @@ sub execute {
         list(\@new, \@modified);
         while (my $key = lc(prompt('stage [y/n/d/l]?', qr/[yndl]/i))) {
             if ($key eq 'd') {
+                foreach my $file (@new) {
+                    $current->git('diff', '/dev/null', $file);
+                }
                 $current->git('diff');
             } elsif ($key eq 'l') {
                 list(\@new, \@modified);
