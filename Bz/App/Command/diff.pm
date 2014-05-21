@@ -75,7 +75,7 @@ sub diff {
 
     $workdir->unfix();
     chdir($workdir->path);
-    my @command = ('diff', '--staged');
+    my @command = ('diff', '--staged', '--full-index');
     push @command, ('-w') if $opt->whitespace;
     my $patch = $workdir->git(@command);
     my $filename;
