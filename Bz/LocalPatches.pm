@@ -53,6 +53,18 @@ use constant PATCHES => (
             action  => sub { s/(\n\s*RewriteEngine On)\n\s*RewriteBase [^\n]+/$1/ },
         },
     },
+    {
+        desc    => 'BugzillaTitle',
+        file    => 'extensions/BMO/template/en/default/hook/global/variables-end.none.tmpl',
+        apply   => {
+            match   => sub { /Bugzilla\@Mozilla/ },
+            action  => sub { s/Bugzilla\@Mozilla/Bugzilla\@Development/ },
+        },
+        revert  => {
+            match   => sub { /Bugzilla\@Development/ },
+            action  => sub { s/Bugzilla\@Development/Bugzilla\@Mozilla/ },
+        },
+    },
 );
 
 sub apply {
@@ -70,6 +82,7 @@ sub _patch {
 
     chdir($workdir->path);
     foreach my $patch (PATCHES) {
+        next unless-e $patch->{file};
         my $match  = $patch->{$mode}->{match};
         my $action = $patch->{$mode}->{action};
 
