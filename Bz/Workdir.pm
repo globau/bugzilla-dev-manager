@@ -234,6 +234,7 @@ sub fix {
     Bz::LocalPatches->apply($self);
     $self->fix_params();
     $self->fix_permissions();
+    $self->fix_missing_dirs();
 }
 
 sub unfix {
@@ -332,6 +333,18 @@ sub fix_permissions {
     @spec = grep { $_ ne 'data' } @spec;
     sudo_on_output("chown -R $user @spec");
     sudo_on_output('find . -path ./data -prune -type d -exec chmod g+x {} \;');
+}
+
+sub fix_missing_dirs {
+    my ($self) = @_;
+    # some directories are created by checksetup
+    # create them here so we can skip running checksetup
+
+    chdir($self->path);
+    foreach my $dir (qw( skins/assets )) {
+        next if -d $dir;
+        mkdir($dir);
+    }
 }
 
 sub check_db {
