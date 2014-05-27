@@ -25,7 +25,7 @@ sub execute {
     my $current = Bz->current();
     my @files = @$args
         ? @$args
-        : grep { !/\.(?:patch|htaccess)$/ } (
+        : grep { -f $_ && !/\.(?:patch|htaccess)$/ } (
             $current->new_files,
             $current->modified_files,
             $current->staged_files,
