@@ -341,7 +341,7 @@ sub fix_missing_dirs {
     # create them here so we can skip running checksetup
 
     chdir($self->path);
-    foreach my $dir (qw( skins/assets )) {
+    foreach my $dir (qw( data/assets )) {
         next if -d $dir;
         mkdir($dir);
     }
