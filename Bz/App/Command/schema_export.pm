@@ -28,8 +28,12 @@ sub execute {
     my $filename = $args->[0];
     my $dbh = $workdir->bz_dbh;
     my ($schema) = $dbh->selectrow_array("SELECT schema_data FROM bz_schema");
-    info("writing schema to '$filename'");
-    write_file($filename, $schema);
+    if ($filename eq '-') {
+        print $schema;
+    } else {
+        info("writing schema to '$filename'");
+        write_file($filename, $schema);
+    }
 }
 
 1;
