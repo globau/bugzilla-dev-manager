@@ -2,6 +2,7 @@ package Bz::Repo;
 use Bz;
 use Moo;
 
+use Cwd 'abs_path';
 use File::Basename;
 use File::Find;
 use File::Slurp;
@@ -47,20 +48,24 @@ sub _build_branch {
 
 sub git {
     my ($self, @args) = @_;
+    my $cwd = abs_path();
     chdir($self->path);
     if (defined wantarray()) {
         return capturex(EXIT_ANY, 'git', @args);
     } else {
         return runx(EXIT_ANY, 'git', @args);
     }
+    chdir($cwd);
 }
 
 sub update {
     my ($self) = @_;
     info("updating repo " . $self->dir);
     $self->fix();
+    my $cwd = abs_path();
     chdir($self->path);
     $self->git(qw(pull --rebase));
+    chdir($cwd);
 }
 
 sub fix {
@@ -96,6 +101,7 @@ sub fix_line_endings {
 sub revert_permissions {
     my ($self) = @_;
 
+    my $cwd = abs_path();
     chdir($self->path);
     my $file;
     foreach my $line ($self->git('diff')) {
@@ -108,11 +114,13 @@ sub revert_permissions {
         message("fixing properties for $file --> $perm");
         sudo_on_output("chmod $perm $file");
     }
+    chdir($cwd);
 }
 
 sub fix_permissions {
     my ($self) = @_;
 
+    my $cwd = abs_path();
     chdir($self->path);
     foreach my $file (`find . -type f -perm /111`) {
         chomp $file;
@@ -122,6 +130,7 @@ sub fix_permissions {
         $file = '"' . $file . '"' if $file =~ / /;
         sudo_on_output("chmod -x $file");
     }
+    chdir($cwd);
 }
 
 sub delete_crud {
@@ -164,6 +173,7 @@ sub delete_crud {
 sub new_files {
     my ($self) = @_;
 
+    my $cwd = abs_path();
     chdir($self->path);
     my @files;
     foreach my $line ($self->git(qw(status --porcelain))) {
@@ -172,12 +182,14 @@ sub new_files {
             push @files, $1;
         }
     }
+    chdir($cwd);
     return @files;
 }
 
 sub modified_files {
     my ($self) = @_;
 
+    my $cwd = abs_path();
     chdir($self->path);
     my @files;
     foreach my $line ($self->git(qw(status --porcelain))) {
@@ -186,12 +198,14 @@ sub modified_files {
             push @files, $1;
         }
     }
+    chdir($cwd);
     return @files;
 }
 
 sub staged_files {
     my ($self) = @_;
 
+    my $cwd = abs_path();
     chdir($self->path);
     my @files;
     foreach my $line ($self->git(qw(status --porcelain))) {
@@ -200,12 +214,14 @@ sub staged_files {
             push @files, $1;
         }
     }
+    chdir($cwd);
     return @files;
 }
 
 sub committed_files {
     my ($self) = @_;
 
+    my $cwd = abs_path();
     chdir($self->path);
     my @files;
     foreach my $line ($self->git('diff', '--name-status', 'origin/' . $self->branch, $self->branch)) {
@@ -214,12 +230,14 @@ sub committed_files {
             push @files, $1;
         }
     }
+    chdir($cwd);
     return @files;
 }
 
 sub added_files {
     my ($self) = @_;
 
+    my $cwd = abs_path();
     chdir($self->path);
     my @files;
     foreach my $line ($self->git(qw(status --porcelain))) {
@@ -228,6 +246,7 @@ sub added_files {
             push @files, $1;
         }
     }
+    chdir($cwd);
     return @files;
 }
 
@@ -274,6 +293,7 @@ sub check_for_tabs {
 sub check_for_unknown_files {
     my ($self) = @_;
 
+    my $cwd = abs_path();
     chdir($self->path);
     my @unknown;
     foreach my $line ($self->git(qw(status --porcelain))) {
@@ -287,6 +307,7 @@ sub check_for_unknown_files {
         ;
         push @unknown, $file;
     }
+    chdir($cwd);
     return unless @unknown;
 
     alert('The following files are new but are not staged');
@@ -300,6 +321,7 @@ sub check_for_unknown_files {
 sub check_for_common_mistakes {
     my ($self, $filename) = @_;
 
+    my $cwd = abs_path();
     chdir($self->path);
     my @lines;
     if ($filename) {
@@ -307,6 +329,7 @@ sub check_for_common_mistakes {
     } else {
         @lines = $self->git(qw(diff --staged));
     }
+    chdir($cwd);
 
     my %whitespace;
     my %xxx;
@@ -365,15 +388,18 @@ sub download_patch {
         exit unless confirm("the patch from a different bug:\nBug $bug_id: $summary\ncontinue?");
     }
 
+    my $cwd = abs_path();
     chdir($self->path);
     info("creating $filename");
     write_file($filename, { binmode => ':raw' }, $content);
+    chdir($cwd);
     return $filename;
 }
 
 sub apply_patch {
     my ($self, $filename) = @_;
 
+    my $cwd = abs_path();
     chdir($self->path);
     my @patch = read_file($filename);
 
@@ -396,6 +422,7 @@ sub apply_patch {
         print $patch $line;
     }
     close($patch);
+    chdir($cwd);
 }
 
 1;

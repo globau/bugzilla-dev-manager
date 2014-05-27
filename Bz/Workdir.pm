@@ -8,6 +8,7 @@ use Bz::Bug;
 use Bz::LocalPatches;
 use Bz::Repo;
 use CGI;
+use Cwd 'abs_path';
 use Data::Dumper;
 use File::Basename;
 use File::Copy::Recursive 'dircopy';
@@ -137,6 +138,7 @@ sub dbh {
 
 sub bz_dbh {
     my ($self) = @_;
+    my $cwd = abs_path();
     chdir($self->path);
     my $dbh;
     eval '
@@ -144,6 +146,7 @@ sub bz_dbh {
         $dbh = Bugzilla->dbh;
     ';
     Bz->init(); # restore our SIG handlers
+    chdir($cwd);
     return $dbh;
 }
 
@@ -224,8 +227,10 @@ sub localconfig {
 sub run_checksetup {
     my ($self, @args) = @_;
     info("running checksetup");
+    my $cwd = abs_path();
     chdir($self->path);
     system "./checksetup.pl @args";
+    chdir($cwd);
 }
 
 sub fix {
@@ -321,6 +326,7 @@ sub fix_params {
 
 sub fix_permissions {
     my ($self) = @_;
+    my $cwd = abs_path();
     chdir($self->path);
 
     $self->SUPER::fix_permissions();
@@ -333,6 +339,7 @@ sub fix_permissions {
     @spec = grep { $_ ne 'data' } @spec;
     sudo_on_output("chown -R $user @spec");
     sudo_on_output('find . -path ./data -prune -type d -exec chmod g+x {} \;');
+    chdir($cwd);
 }
 
 sub fix_missing_dirs {
@@ -340,11 +347,13 @@ sub fix_missing_dirs {
     # some directories are created by checksetup
     # create them here so we can skip running checksetup
 
+    my $cwd = abs_path();
     chdir($self->path);
     foreach my $dir (qw( data/assets )) {
         next if -d $dir;
         mkdir($dir);
     }
+    chdir($cwd);
 }
 
 sub check_db {
@@ -362,6 +371,7 @@ sub test {
 
     $self->SUPER::test();
 
+    my $cwd = abs_path();
     chdir($self->path);
     my @test_files;
     if ($args && @$args) {
@@ -374,20 +384,25 @@ sub test {
     }
 
     $self->run_tests($opt, @test_files);
+    chdir($cwd);
 }
 
 sub run_tests {
     my ($self, $opt, @test_files) = @_;
 
+    my $cwd = abs_path();
     chdir($self->path);
     $Test::Harness::verbose = $opt->verbose if $opt;
     Test::Harness::runtests(@test_files);
+    chdir($cwd);
 }
 
 sub delete {
     my ($self) = @_;
+    my $cwd = abs_path();
     chdir(Bz->config->htdocs_path);
     remove_tree($self->dir);
+    chdir($cwd);
 }
 
 1;
