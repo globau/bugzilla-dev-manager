@@ -360,7 +360,10 @@ sub check_db {
     my ($self) = @_;
 
     my $dbh = $self->dbh;
-    my $count = $dbh->selectrow_array("SELECT count(*) FROM profiles WHERE disable_mail = 0");
+    my $count = 0;
+    eval {
+        $count = $dbh->selectrow_array("SELECT count(*) FROM profiles WHERE disable_mail = 0");
+    };
     if ($count > 5) {
         warn($self->db . " has $count users with bugmail enabled\n");
     }
