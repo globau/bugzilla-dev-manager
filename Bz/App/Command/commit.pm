@@ -35,6 +35,9 @@ sub execute {
     my ($self, $opt, $args) = @_;
     my $repo = Bz->current;
 
+    die "this command does not support upstream bugzilla\n"
+        unless $repo->url =~ m#webtools/bmo/bugzilla\.git$#;
+
     my @staged = $repo->staged_files();
     my @committed = $repo->committed_files();
 
