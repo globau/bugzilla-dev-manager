@@ -132,7 +132,7 @@ sub _build_db {
 }
 
 sub dbh {
-    my ($self) = @_;
+    my ($self) = shift;
     return Bz->mysql->dbh($self->db, @_);
 }
 
