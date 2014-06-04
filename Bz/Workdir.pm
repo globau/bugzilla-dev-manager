@@ -347,13 +347,20 @@ sub fix_missing_dirs {
     # some directories are created by checksetup
     # create them here so we can skip running checksetup
 
-    my $cwd = abs_path();
-    chdir($self->path);
-    foreach my $dir (qw( data/assets )) {
-        next if -d $dir;
-        mkdir($dir);
+    my $path = $self->path;
+
+    if (!-d "$path/data/assets") {
+        mkdir("$path/data/assets");
+        write_file("$path/data/assets/.htaccess", <<'EOF');
+# Allow access to .css files
+<FilesMatch \.css$>
+  Allow from all
+</FilesMatch>
+
+# And no directory listings, either.
+Deny from all
+EOF
     }
-    chdir($cwd);
 }
 
 sub check_db {
