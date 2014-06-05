@@ -186,6 +186,11 @@ sub new_files {
     return @files;
 }
 
+sub new_code_files {
+    my ($self) = @_;
+    return grep { /\.(pm|pl|tmpl|js|css|t)$/ } $self->new_files;
+}
+
 sub modified_files {
     my ($self) = @_;
 
@@ -293,21 +298,14 @@ sub check_for_tabs {
 sub check_for_unknown_files {
     my ($self) = @_;
 
-    my $cwd = abs_path();
-    chdir($self->path);
     my @unknown;
-    foreach my $line ($self->git(qw(status --porcelain))) {
-        chomp $line;
-        next unless $line =~ /^\?\? (.+)/;
-        my $file = $1;
-
+    foreach my $file ($self->new_files) {
         next if
             ($file =~ /\.htaccess$/ && $file ne '.htaccess')
             || $file =~ /\.(patch|orig)$/
         ;
         push @unknown, $file;
     }
-    chdir($cwd);
     return unless @unknown;
 
     alert('The following files are new but are not staged');
@@ -319,15 +317,13 @@ sub check_for_unknown_files {
 }
 
 sub check_for_common_mistakes {
-    my ($self, $filename) = @_;
+    my ($self) = @_;
 
     my $cwd = abs_path();
     chdir($self->path);
-    my @lines;
-    if ($filename) {
-        @lines = read_file($filename);
-    } else {
-        @lines = $self->git(qw(diff --staged));
+    my @lines = $self->git(qw(diff --staged));
+    foreach my $file ($self->new_code_files()) {
+        push @lines, $self->git('diff', '/dev/null', $file);
     }
     chdir($cwd);
 
@@ -336,7 +332,7 @@ sub check_for_common_mistakes {
     my $hunk_file;
     foreach my $line (@lines) {
         next unless $line =~ /^\+/;
-        if ($line =~ /^\+\+\+ (\S+)/) {
+        if ($line =~ /^\+\+\+ [ab]\/(\S+)/) {
             $hunk_file = $1;
             next;
         }
@@ -355,7 +351,7 @@ sub check_for_common_mistakes {
         foreach my $file (sort keys %whitespace) {
             warning($file);
             foreach my $line (@{ $whitespace{$file} }) {
-                warning("  $line");
+                message("  $line");
             }
         }
     }
@@ -364,8 +360,20 @@ sub check_for_common_mistakes {
         foreach my $file (sort keys %xxx) {
             warning($file);
             foreach my $line (@{ $xxx{$file} }) {
-                warning("   $line");
+                message("   $line");
             }
+        }
+    }
+
+    my @missing_bp;
+    foreach my $file (($self->new_code_files(), $self->staged_files())) {
+        push @missing_bp, $file
+            unless Bz->boiler_plate->exists($file);
+    }
+    if (@missing_bp) {
+        alert("missing boiler plate:");
+        foreach my $file (sort @missing_bp) {
+            warning($file);
         }
     }
 }
