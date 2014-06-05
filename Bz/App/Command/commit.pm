@@ -2,6 +2,8 @@ package Bz::App::Command::commit;
 use parent 'Bz::App::Base';
 use Bz;
 
+use File::Temp;
+
 sub abstract {
     return "commits current changes";
 }
@@ -35,8 +37,8 @@ sub execute {
     my ($self, $opt, $args) = @_;
     my $repo = Bz->current;
 
-    die "this command does not support upstream bugzilla\n"
-        unless $repo->url =~ m#webtools/bmo/bugzilla\.git$#;
+    my $is_bmo = $repo->url =~ m#webtools/bmo/bugzilla\.git$#;
+    my $temp_file;
 
     my @staged = $repo->staged_files();
     my @committed = $repo->committed_files();
@@ -91,13 +93,23 @@ sub execute {
             message('  ' . $args[-1]);
         }
 
-        push @args, (
-            '-m', 'Bug ' . $bug->id . ': ' . $bug->summary,
-        );
-        message('  -m "' . $args[-1] . '"');
+        if ($is_bmo) {
+            push @args, (
+                '-m', 'Bug ' . $bug->id . ': ' . $bug->summary,
+            );
+            message('  -m "' . $args[-1] . '"');
+        }
         message('git push');
 
         return unless confirm("commit and push?");
+
+        if (!$is_bmo) {
+            $temp_file = File::Temp->new();
+            print $temp_file 'Bug ' . $bug->id . ': ' . $bug->summary . "\nr=?,a=?\n";
+            close($temp_file);
+            push @args, '-t', scalar($temp_file);
+        }
+
         $repo->git(@args);
     } else {
         return unless confirm("push?");
