@@ -13,7 +13,13 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "bz schema_export <filename>";
+    return "bz schema_export <filename> [--json]";
+}
+
+sub opt_spec {
+    return (
+        [ "json|j", "export as json instead of Data::Dumper" ],
+    );
 }
 
 sub validate_args {
@@ -28,6 +34,22 @@ sub execute {
     my $filename = $args->[0];
     my $dbh = $workdir->bz_dbh;
     my ($schema) = $dbh->selectrow_array("SELECT schema_data FROM bz_schema");
+
+    if ($opt->json) {
+        require Safe;
+        my $cpt = Safe->new();
+        $cpt->reval($schema)
+            || die "invalid schema file: " . $@;
+        require JSON::PP;
+        my $json = JSON::PP->new
+            ->utf8
+            ->pretty
+            ->indent_length(2)
+            ->space_before(0)
+            ->canonical;
+        $schema = $json->encode(${ $cpt->varglob('VAR1') });
+    }
+
     if ($filename eq '-') {
         print $schema;
     } else {
