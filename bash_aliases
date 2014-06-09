@@ -9,7 +9,14 @@ function bznew {
 }
 
 function cdb() {
-    cd `bz path "$@"`
+    P=`bz path "$@"`
+    if (( $? == 1 )) ; then
+        T=`bz path --repo "$@"`
+        if (( $? == 0 )); then
+            P=$T
+        fi
+    fi
+    cd $P
     bz summary
 }
 
