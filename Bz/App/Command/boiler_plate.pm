@@ -23,6 +23,7 @@ sub execute {
     my ($self, $opt, $args) = @_;
 
     my $current = Bz->current();
+    $current->unfix();
     my @files = @$args
         ? @$args
         : grep { -f $_ && !/\.(?:patch|htaccess)$/ } (
@@ -31,6 +32,7 @@ sub execute {
             $current->staged_files,
             $current->added_files)
     ;
+    $current->fix();
 
     @files = grep { !Bz->boiler_plate->exists($_) } @files;
     die "no files with missing boiler-plates\n" unless @files;
