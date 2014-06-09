@@ -96,9 +96,9 @@ sub _isa_repo {
 
 sub _build_repo {
     my ($self) = @_;
-    if ($self->url =~ m#webtools/bmo/bugzilla\.git$#) {
+    if ($self->is_bmo) {
         return 'bmo/' . $self->branch;
-    } elsif ($self->url =~ m#bugzilla/bugzilla\.git$#) {
+    } elsif ($self->is_upstream) {
         return 'bugzilla/' . $self->branch;
     } else {
         return '';
@@ -278,7 +278,7 @@ sub fix_params {
         $params{$name} = $config->params->$name;
     }
 
-    if ($self->url =~ m#webtools/bmo/bugzilla\.git$#) {
+    if ($self->is_bmo) {
         foreach my $name ($config->params_bmo->_names) {
             $params{$name} = $config->params_bmo->$name;
         }

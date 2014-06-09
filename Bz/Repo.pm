@@ -9,6 +9,8 @@ use File::Slurp;
 use IPC::System::Simple qw(EXIT_ANY capturex runx);
 
 has is_workdir      => ( is => 'ro', default => sub { 0 } );
+has is_bmo          => ( is => 'lazy' );
+has is_upstream     => ( is => 'lazy' );
 has dir             => ( is => 'lazy' );
 has path            => ( is => 'lazy' );
 has url             => ( is => 'lazy' );
@@ -17,6 +19,16 @@ has branch          => ( is => 'lazy' );
 use overload (
     '""' => sub { $_[0]->dir }
 );
+
+sub _build_is_bmo {
+    my ($self) = @_;
+    return $self->url =~ m#webtools/bmo/bugzilla\.git$#;
+}
+
+sub _build_is_upstream {
+    my ($self) = @_;
+    return $self->url =~ m#bugzilla/bugzilla\.git$#;
+}
 
 sub _build_dir {
     my ($self) = @_;

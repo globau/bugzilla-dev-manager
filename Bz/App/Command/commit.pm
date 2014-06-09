@@ -9,13 +9,14 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "bz commit <bug_id> [--me][--quick]";
+    return "bz commit <bug_id> [--me][--quick][--edit]";
 }
 
 sub opt_spec {
     return (
         [ "me", "ignore bug assignee when setting the patch author" ],
         [ "quick|q", "don't run tests before committing" ],
+        [ "edit|e", "edit the commit message" ],
     );
 }
 
@@ -37,7 +38,7 @@ sub execute {
     my ($self, $opt, $args) = @_;
     my $repo = Bz->current;
 
-    my $is_bmo = $repo->url =~ m#webtools/bmo/bugzilla\.git$#;
+    $opt->edit(1) if $repo->is_upstream;
     my $temp_file;
 
     my @staged = $repo->staged_files();
@@ -93,19 +94,20 @@ sub execute {
             message('  ' . $args[-1]);
         }
 
-        if ($is_bmo) {
-            push @args, (
-                '-m', 'Bug ' . $bug->id . ': ' . $bug->summary,
-            );
-            message('  -m "' . $args[-1] . '"');
+        my $message = 'Bug ' . $bug->id . ': ' . $bug->summary;
+        $message .= "\nr=?,a=?"
+            if $repo->is_upstream;
+        if (!$opt->edit) {
+            push @args, '-m', $message;
         }
-        message('git push');
+        message("  -m '$message'");
 
+        message('git push');
         return unless confirm("commit and push?");
 
-        if (!$is_bmo) {
+        if ($opt->edit) {
             $temp_file = File::Temp->new();
-            print $temp_file 'Bug ' . $bug->id . ': ' . $bug->summary . "\nr=?,a=?\n";
+            print $temp_file $message;
             close($temp_file);
             push @args, '-t', scalar($temp_file);
         }
