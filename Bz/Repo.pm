@@ -337,7 +337,6 @@ sub check_for_common_mistakes {
     foreach my $file ($self->new_code_files()) {
         push @lines, $self->git('diff', '/dev/null', $file);
     }
-    chdir($cwd);
 
     my %whitespace;
     my %xxx;
@@ -388,6 +387,7 @@ sub check_for_common_mistakes {
             warning($file);
         }
     }
+    chdir($cwd);
 }
 
 sub download_patch {
