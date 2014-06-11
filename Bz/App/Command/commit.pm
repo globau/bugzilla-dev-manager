@@ -38,7 +38,7 @@ sub execute {
     my ($self, $opt, $args) = @_;
     my $repo = Bz->current;
 
-    $opt->edit(1) if $repo->is_upstream;
+    my $edit = $repo->is_upstream || $opt->edit;
     my $temp_file;
 
     my @staged = $repo->staged_files();
@@ -97,15 +97,19 @@ sub execute {
         my $message = 'Bug ' . $bug->id . ': ' . $bug->summary;
         $message .= "\nr=?,a=?"
             if $repo->is_upstream;
-        if (!$opt->edit) {
+        if (!$edit) {
             push @args, '-m', $message;
         }
         message("  -m '$message'");
 
         message('git push');
-        return unless confirm("commit and push?");
+        return unless confirm(
+            $edit
+            ? "edit message, commit, and push?"
+            : "commit and push?"
+        );
 
-        if ($opt->edit) {
+        if ($edit) {
             $temp_file = File::Temp->new();
             print $temp_file $message;
             close($temp_file);
