@@ -223,7 +223,7 @@ function delete_instance(dir, summary) {
             [% ELSE %]
                 -
             [% END ~%]
-            &nbsp;/&nbsp;
+            <br>
             [%~ IF workdir.db %]
                 [% workdir.db %]
             [% ELSE %]
