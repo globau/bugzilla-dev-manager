@@ -90,7 +90,10 @@ sub _isa_repo {
             last;
         }
     }
-    die "failed to find repo/$repo\n" unless $found;
+    if (!$found) {
+        warn "failed to find repo/$repo\n";
+        return;
+    }
     die "invalid repo '$repo'\n" unless -e $config->repo_path . "/$repo/checksetup.pl";
 }
 
