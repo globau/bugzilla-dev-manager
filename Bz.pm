@@ -11,6 +11,10 @@ use File::Spec;
 sub init {
     $SIG{__DIE__} = sub {
         my $message = "@_";
+
+        for (my $stack = 1; my $sub = (caller($stack))[3]; $stack++) {
+            return if $sub =~ /^\(eval\)/;
+        }
         # urgh
         $message =~ s/^(?:isa check|coercion) for "[^"]+" failed: //;
         $message =~ s/\n+$//;
