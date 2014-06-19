@@ -2,6 +2,7 @@ package Bz::App::Command::patch;
 use parent 'Bz::App::Base';
 use Bz;
 
+use Bz::Util 'coloured';
 use LWP::Simple;
 use URI;
 use URI::QueryParam;
@@ -11,7 +12,7 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "bz patch [bug_id|source_url] [--all] [--download]";
+    return "bz patch [bug_id|source_url] [-preselect] [--all] [--download]";
 }
 
 sub opt_spec {
@@ -43,9 +44,14 @@ sub execute {
     my $current = Bz->current();
     my $source;
     $source = shift @$args
-        if @$args;
+        if @$args && $args->[0] !~ /^-/;
     $source ||= $current->is_workdir ? $current->bug_id : undef;
     die $self->usage_error('missing bug_id or source') unless $source;
+
+    my $preselect;
+    if (@$args && $args->[0] =~ /^-(\d+)$/) {
+        $preselect = $1;
+    }
 
     my $filename;
     if ($source =~ m#^https?://#) {
@@ -99,7 +105,13 @@ sub execute {
             $re .= "$i";
         }
         $prompt .= '? ';
-        my $no = prompt($prompt, qr/[$re]/i);
+        my $no;
+        if ($preselect && $preselect =~ qr/[$re]/i) {
+            print coloured($prompt, 'yellow') . "$preselect\n";
+            $no = $preselect;
+        } else {
+            $no = prompt($prompt, qr/[$re]/i);
+        }
         exit if $no == 0;
         my $attach_id = $patches[$no - 1]->{id};
 
