@@ -1,0 +1,13 @@
+#!/usr/bin/env perl
+use FindBin qw($RealBin);
+use lib $RealBin;
+
+use 5.10.0;
+use Bz;
+use Bz::App;
+use Bz::Util 'notify';
+
+$| = 1;
+Bz->config;
+Bz::App->run;
+notify('command completed');

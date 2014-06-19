@@ -1,6 +1,7 @@
 BZ_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 alias bz="$BZ_ROOT/bz"
+alias bzn="$BZ_ROOT/bzn"
 
 function bznew {
     bz new "$@"
