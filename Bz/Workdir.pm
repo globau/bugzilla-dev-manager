@@ -265,42 +265,33 @@ sub delete_crud {
 
 sub fix_params {
     my ($self) = @_;
+
     my $config = Bz->config;
-
-    my $filename = $self->path . '/data/params';
-    return unless -e $filename;
-
-    my $s = new Safe;
-    $s->rdo($filename);
-    die "Error reading $filename: $!" if $!;
-    die "Error evaluating $filename: $@" if $@;
-    my %params = %{ $s->varglob('param') };
-    my %orig_params = %params;
+    my $params = $self->_load_params();
 
     foreach my $name ($config->params->_names) {
-        $params{$name} = $config->params->$name;
+        $params->{$name} = $config->params->$name;
     }
 
     if ($self->is_bmo) {
         foreach my $name ($config->params_bmo->_names) {
-            $params{$name} = $config->params_bmo->$name;
+            $params->{$name} = $config->params_bmo->$name;
         }
     }
 
     if ($self->dir eq 'mod_perl') {
-        $params{urlbase}            = $config->modperl_url;
-        $params{attachment_base}    = $config->modperl_attach_url;
-        $params{cookiepath}         = "/";
-        $params{cookiedomain}       = '';
+        $params->{urlbase}          = $config->modperl_url;
+        $params->{attachment_base}  = $config->modperl_attach_url;
+        $params->{cookiepath}       = "/";
+        $params->{cookiedomain}     = '';
     }
 
-    foreach my $name (keys %params) {
-        $params{$name} =~ s/\%dir\%/$self->dir/e;
+    foreach my $name (keys %$params) {
+        $params->{$name} =~ s/\%dir\%/$self->dir/e;
     }
 
     my $id = $self->bug_id;
-
-    $params{announcehtml} = sprintf(
+    $params->{announcehtml} = sprintf(
         '<div style="' .
         'background: url(%sbkg_warning.png) repeat-y scroll left top #fff9db;' .
         'color: #666458;' .
@@ -316,15 +307,55 @@ sub fix_params {
         CGI::escapeHTML($self->summary),
     );
 
-    foreach my $name (sort keys %params) {
+    $self->_save_params($params);
+}
+
+sub get_param {
+    my ($self, $name) = @_;
+
+    my $params = $self->_load_params();
+    return $params->{$name};
+}
+
+sub set_param {
+    my ($self, $name, $value) = @_;
+
+    my $params = $self->_load_params();
+    $params->{$name} = $value;
+    $self->_save_params($params);
+}
+
+sub _load_params {
+    my ($self) = @_;
+
+    my $filename = $self->path . '/data/params';
+    return unless -e $filename;
+
+    my $s = new Safe;
+    $s->rdo($filename);
+    die "Error reading $filename: $!" if $!;
+    die "Error evaluating $filename: $@" if $@;
+    my %params = %{ $s->varglob('param') };
+    return \%params;
+}
+
+sub _save_params {
+    my ($self, $params) = @_;
+
+    my $filename = $self->path . '/data/params';
+    return unless -e $filename;
+
+    my $orig = $self->_load_params();
+
+    foreach my $name (sort keys %$params) {
         next if
-            !exists $orig_params{$name}
-            or $params{$name} eq $orig_params{$name};
-        message("setting '$name' to '$params{$name}'");
+            !exists $orig->{$name}
+            or $params->{$name} eq $orig->{$name};
+        message("setting '$name' to '$params->{$name}'");
     }
 
     local $Data::Dumper::Sortkeys = 1;
-    write_file($filename, Data::Dumper->Dump([\%params], ['*param']));
+    write_file($filename, Data::Dumper->Dump([$params], ['*param']));
 }
 
 sub fix_permissions {
