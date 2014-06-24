@@ -87,9 +87,12 @@ sub execute {
             && $bug->assignee ne 'nobody@mozilla.org'
             && !$opt->me
         ) {
-            my $user = Bz->bugzilla->user($bug->assignee);
+            my $name = Bz->bugzilla->user($bug->assignee)->{name};
+            $name =~ s/[\[\<\(][^\]\>\)]*[\]\>\)]/ /g;
+            $name =~ s/\s+/ /g;
+            $name =~ s/(^\s+|\s+$)//g;
             push @args, (
-                "--author=" . $user->{name} . " <" . $bug->assignee . ">",
+                "--author=$name <" . $bug->assignee . ">",
             );
             message('  ' . $args[-1]);
         }
