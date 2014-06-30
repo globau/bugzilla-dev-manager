@@ -227,8 +227,11 @@ sub staged_files {
     my @files;
     foreach my $line ($self->git(qw(status --porcelain))) {
         chomp $line;
-        if ($line =~ /^[^ \?]. (.+)$/) {
-            push @files, $1;
+        if ($line =~ /^([^ \?]). (.+)$/) {
+            my ($mode, $file) = ($1, $2);
+            $file =~ s/^.+? -> //
+                if $mode eq 'R';
+            push @files, $file;
         }
     }
     chdir($cwd);
