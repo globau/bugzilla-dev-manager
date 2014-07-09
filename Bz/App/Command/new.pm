@@ -45,17 +45,21 @@ sub execute {
     }
 
     # use bmo defaults if just 'bmo' is provided, likewise for 'trunk'
-    my ($repo, $db);
+    my ($repo_name, $db);
     if (scalar(@$args) == 1 && $args->[0] eq 'bmo') {
-        ($repo, $db) = ($config->default_bmo_repo, $config->default_bmo_db);
+        ($repo_name, $db) = ($config->default_bmo_repo, $config->default_bmo_db);
     } elsif (scalar(@$args) == 1 && $args->[0] eq 'trunk') {
-        ($repo, $db) = ('trunk', 'trunk');
+        ($repo_name, $db) = ('trunk', 'trunk');
     } else {
-        ($repo, $db) = @$args;
+        ($repo_name, $db) = @$args;
     }
 
-    $workdir->repo($self->_probe_repo($repo, $bug));
+    $workdir->repo($self->_probe_repo($repo_name, $bug));
     $workdir->db($db || $self->_probe_db($bug));
+
+    my $repo = Bz::Repo->new({ dir => $workdir->repo });
+    die "unable to continue: " . $repo->dir . " is pointing to the production branch\n"
+        if $repo->branch eq 'production';
 
     if (!$mysql->database_exists($workdir->db)) {
         exit unless confirm("the database '" . $workdir->db . "' does not exist, continue?");
