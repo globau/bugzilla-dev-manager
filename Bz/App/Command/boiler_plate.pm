@@ -26,7 +26,7 @@ sub execute {
     $current->unfix();
     my @files = @$args
         ? @$args
-        : grep { -f $_ && !/\.(?:patch|htaccess)$/ } (
+        : grep { -f $_ && !-B $_ && !/\.(?:patch|htaccess)$/ } (
             $current->new_files,
             $current->modified_files,
             $current->staged_files,
