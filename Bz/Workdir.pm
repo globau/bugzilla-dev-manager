@@ -25,6 +25,7 @@ has bug_id      => ( is => 'lazy' );
 has bug         => ( is => 'lazy' );
 has repo        => ( is => 'rw', lazy => 1, coerce => \&_coerce_repo, isa => \&_isa_repo, builder => 1 );
 has db          => ( is => 'rw', lazy => 1, coerce => \&_coerce_db, builder => 1 );
+has is_mod_perl => ( is => 'lazy' );
 
 use overload (
     '""' => sub { "instance " . $_[0]->dir }
@@ -67,6 +68,11 @@ sub _build_bug {
     return $self->bug_id
         ? Bz::Bug->new({ id => $self->bug_id })
         : undef;
+}
+
+sub _build_is_mod_perl {
+    my ($self) = @_;
+    return $self->dir eq 'mod_perl';
 }
 
 sub _coerce_repo {
