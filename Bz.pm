@@ -4,25 +4,32 @@ use warnings;
 use autodie;
 
 use Bz::Util;
+use Carp;
 use Cwd 'abs_path';
 use Data::Dumper;
 use File::Spec;
 
+my %_OLD_SIG;
 sub init {
+    @_OLD_SIG{qw(__DIE__ __WARN__)} = @SIG{qw(__DIE__ __WARN__)};
     $SIG{__DIE__} = sub {
         my $message = "@_";
-
         for (my $stack = 1; my $sub = (caller($stack))[3]; $stack++) {
             return if $sub =~ /^\(eval\)/;
         }
         # urgh
         $message =~ s/^(?:isa check|coercion) for "[^"]+" failed: //;
         $message =~ s/\n+$//;
-        die Bz::Util::die_coloured($message) . "\n";
+        if ($ENV{DEBUG}) {
+            die Bz::Util::die_coloured($message) . "\n" . _stack();
+        } else {
+            die Bz::Util::die_coloured($message) . "\n";
+        }
     };
     $SIG{__WARN__} = sub {
         print Bz::Util::warn_coloured(@_);
     };
+
     $Data::Dumper::Sortkeys = 1;
     binmode(STDOUT, ':utf8');
     binmode(STDERR, ':utf8');
@@ -30,6 +37,18 @@ sub init {
 
 BEGIN {
     init();
+}
+
+END {
+    @SIG{qw(__DIE__ __WARN__)} = @_OLD_SIG{qw(__DIE__ __WARN__)};
+}
+
+sub _stack {
+    my @stack = split(/\n/, Carp::longmess());
+    foreach my $line (@stack) {
+        $line =~ s/^\s+/  /;
+    }
+    return join("\n", @stack) . "\n";
 }
 
 sub import {
