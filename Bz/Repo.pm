@@ -219,7 +219,7 @@ sub modified_files {
 
 sub staged_files {
     my ($self) = @_;
-    return $self->git_status('[^ \?].');
+    return $self->git_status('[^ \?D].');
 }
 
 sub committed_files {
@@ -354,6 +354,7 @@ sub check_for_common_mistakes {
 
     my @missing_bp;
     foreach my $file (($self->new_code_files(), $self->staged_files())) {
+        next if -B $file;
         push @missing_bp, $file
             unless Bz->boiler_plate->exists($file);
     }
