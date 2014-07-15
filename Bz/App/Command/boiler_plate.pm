@@ -21,18 +21,22 @@ EOF
 
 sub execute {
     my ($self, $opt, $args) = @_;
-
     my $current = Bz->current();
-    $current->unfix();
-    my @files = @$args
-        ? @$args
-        : grep { -f $_ && !-B $_ && !/\.(?:patch|htaccess)$/ } (
+
+    my @files;
+
+    if (@$args) {
+        @files = @$args;
+    } else {
+        $current->unfix();
+        @files = grep { -f $_ && !-B $_ && !/\.(?:patch|htaccess)$/ } (
             $current->new_files,
             $current->modified_files,
             $current->staged_files,
-            $current->added_files)
-    ;
-    $current->fix();
+            $current->added_files
+        );
+        $current->fix();
+    }
 
     @files = grep { !Bz->boiler_plate->exists($_) } @files;
     die "no files with missing boiler-plates\n" unless @files;
