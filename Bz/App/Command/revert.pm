@@ -12,16 +12,16 @@ sub execute {
     my ($self, $opt, $args) = @_;
 
     info("reverting all local changes and commits");
-    my $workdir = Bz->current_workdir;
-    $workdir->unfix();
-    $workdir->git(
+    my $current = Bz->current;
+    $current->unfix() if $current->is_workdir;
+    $current->git(
         'reset',
-        'origin/' . $workdir->branch,
+        'origin/' . $current->branch,
         '--hard',
     );
-    $workdir->git(qw(clean -f -d));
-    $workdir->git('pull');
-    $workdir->fix();
+    $current->git(qw(clean -f -d));
+    $current->git('pull');
+    $current->fix() if $current->is_workdir;
 }
 
 1;
