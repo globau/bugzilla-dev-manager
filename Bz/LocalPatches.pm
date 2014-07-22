@@ -31,6 +31,19 @@ use constant PATCHES => (
         },
     },
     {
+        desc    => 't/012 warnings skip password* errors',
+        file    => 't/012throwables.t',
+        modperl => 1,
+        apply   => {
+            match   => sub { /^\s+DefinedIn\(\$errtype, \$errtag, \$lang\);$/ },
+            action  => sub { s/^([^;]+);$/$1 unless \$errtype eq 'user' and \$errtag =~ \/^password\/;/ },
+        },
+        revert  => {
+            match   => sub { /^\s+DefinedIn\(\$errtype, \$errtag, \$lang\) unless/ },
+            action  => sub { s/^(\s+).+$/$1DefinedIn(\$errtype, \$errtag, \$lang);/ },
+        },
+    },
+    {
         desc    => 'mod_perl sizelimit',
         file    => 'mod_perl.pl',
         modperl => 1,
