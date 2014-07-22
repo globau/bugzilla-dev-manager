@@ -101,9 +101,8 @@ sub _patch {
     chdir($workdir->path);
     foreach my $patch (PATCHES) {
         next unless-e $patch->{file};
-        if ($workdir->is_mod_perl) {
-            $mode = $patch->{modperl} ? 'apply' : 'revert';
-        }
+        next if $workdir->is_mod_perl && !$patch->{modperl};
+
         my $match  = $patch->{$mode}->{match};
         my $action = $patch->{$mode}->{action};
 
