@@ -91,9 +91,15 @@ sub execute {
             $name =~ s/[\[\<\(][^\]\>\)]*[\]\>\)]/ /g;
             $name =~ s/\s+/ /g;
             $name =~ s/(^\s+|\s+$)//g;
-            push @args, (
-                "--author=$name <" . $bug->assignee . ">",
-            );
+            if ($name) {
+                push @args, (
+                    "--author=$name <" . $bug->assignee . ">",
+                );
+            } else {
+                push @args, (
+                    "--author=" . $bug->assignee,
+                );
+            }
             message('  ' . $args[-1]);
         }
 
