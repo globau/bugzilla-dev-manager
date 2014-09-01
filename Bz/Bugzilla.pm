@@ -13,6 +13,7 @@ use constant BUG_FIELDS => [qw(
     target_milestone
     summary
     status
+    resolution
     assigned_to
 )];
 
