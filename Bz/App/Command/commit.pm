@@ -41,7 +41,7 @@ sub execute {
     my $edit = $repo->is_upstream || $opt->edit;
     my $temp_file;
 
-    my @staged = $repo->staged_files();
+    my @staged = $repo->staged_changes();
     my @committed = $repo->committed_files();
 
     die "no files are staged or committed\n"

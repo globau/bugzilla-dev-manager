@@ -222,6 +222,11 @@ sub staged_files {
     return $self->git_status('[^ \?D].');
 }
 
+sub staged_changes {
+    my ($self) = @_;
+    return $self->git_status('[^ \?].');
+}
+
 sub committed_files {
     my ($self) = @_;
 
