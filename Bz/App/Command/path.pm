@@ -39,12 +39,24 @@ sub execute {
             # repo path, eg "bmo/4.2"
             if (-e "$repo_path/$repo") {
                 $path = "$repo_path/$repo";
+            }
 
-            } else {
-                # repo dir, eg "trunk"
+            # repo dir, eg "trunk"
+            unless ($path) {
                 foreach my $base (qw( bmo bugzilla )) {
                     if (-d "$repo_path/$base/$repo") {
                         $path = "$repo_path/$base/$repo";
+                        last;
+                    }
+                }
+            }
+
+            # repo dir prefix, eg "dev" --> "dev*" --> "development"
+            unless ($path) {
+                foreach my $base (qw( bmo bugzilla )) {
+                    my @dirs = grep { -d $_ && !/\./ } glob("$repo_path/$base/$repo*");
+                    if (scalar @dirs == 1) {
+                        $path = $dirs[0];
                         last;
                     }
                 }
