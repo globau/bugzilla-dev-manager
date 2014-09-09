@@ -29,6 +29,22 @@ sub execute {
             glob($workdir->dir . '*.patch');
     }
     splice(@files, 0, -2);
+
+    # if the only patch is one that we fetched from a bug, automatically
+    # download the last patch
+    if (scalar @files == 1 && $files[0] =~ /^\d+-\d+\.patch$/ && $workdir->bug_id) {
+        message("looking for a previous patch");
+        my ($current_attach_id) = $files[0] =~ /^\d+-(\d+)/;
+        my @patches =
+            sort { $a->{id} <=> $b->{id} }
+            grep { $_->{id} != $current_attach_id }
+            @{ Bz->bugzilla->attachments($workdir->bug_id) };
+        if (my $patch = pop @patches) {
+            my $filename = $workdir->download_patch($patch->{id});
+            unshift @files, $filename;
+        }
+    }
+
     die "failed to find 2 patches\n" unless scalar(@files) == 2;
     info("interdiff'ing @files");
     system "interdiff @files";
