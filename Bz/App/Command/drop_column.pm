@@ -43,7 +43,7 @@ sub execute {
         if ($exists) {
             exit unless confirm("are you sure you want to drop the column '$table.$column'?");
         }
-        push @columns, { table => $table, column => $column };
+        push @columns, { table => $table, column => $column, exists => $exists };
     }
 
     message("loading schema");
@@ -72,11 +72,11 @@ sub execute {
     }
 
     foreach my $rh (@columns) {
-        my ($table, $column) = ($rh->{table}, $rh->{column});
+        my ($table, $column, $exists) = ($rh->{table}, $rh->{column}, $rh->{exists});
         my $table_schema = $schema->{abstract_schema}->{$table};
         my @fields = @{$table_schema->{FIELDS}};
         info("dropping '$table.$column'");
-        $dbh->do("ALTER TABLE $table DROP COLUMN $column");
+        $dbh->do("ALTER TABLE $table DROP COLUMN $column") if $exists;
         my @new_fields;
         for (my $i = 0; $i < scalar(@fields); $i += 2) {
             my ($name, $rh) = @fields[$i, $i + 1];
