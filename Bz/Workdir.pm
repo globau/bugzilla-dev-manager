@@ -15,6 +15,7 @@ use File::Copy::Recursive 'dircopy';
 use File::Find;
 use File::Path 'remove_tree';
 use File::Slurp;
+use JSON;
 use Safe;
 use Test::Harness ();
 
@@ -333,26 +334,31 @@ sub set_param {
 
 sub _load_params {
     my ($self) = @_;
+    return unless -e $self->path . '/data/params' || -e $self->path . '/data/params.js';
 
     my $filename = $self->path . '/data/params';
-    return unless -e $filename;
+    if (-e $filename) {
+        my $s = new Safe;
+        $s->rdo($filename);
+        die "Error reading $filename: $!" if $!;
+        die "Error evaluating $filename: $@" if $@;
+        my %params = %{ $s->varglob('param') };
+        return \%params;
+    }
 
-    my $s = new Safe;
-    $s->rdo($filename);
-    die "Error reading $filename: $!" if $!;
-    die "Error evaluating $filename: $@" if $@;
-    my %params = %{ $s->varglob('param') };
-    return \%params;
+    $filename .= '.js';
+    if (-e $filename) {
+        return decode_json(read_file($filename, binmode => ':utf8'));
+    }
+
+    return;
 }
 
 sub _save_params {
     my ($self, $params) = @_;
-
-    my $filename = $self->path . '/data/params';
-    return unless -e $filename;
+    return unless -e $self->path . '/data/params' || -e $self->path . '/data/params.js';
 
     my $orig = $self->_load_params();
-
     foreach my $name (sort keys %$params) {
         next if
             !exists $orig->{$name}
@@ -360,8 +366,18 @@ sub _save_params {
         message("setting '$name' to '$params->{$name}'");
     }
 
-    local $Data::Dumper::Sortkeys = 1;
-    write_file($filename, Data::Dumper->Dump([$params], ['*param']));
+    my $filename = $self->path . '/data/params';
+    if (-e $filename) {
+        local $Data::Dumper::Sortkeys = 1;
+        write_file($filename, Data::Dumper->Dump([$params], ['*param']));
+        return;
+    }
+
+    $filename .= '.js';
+    if (-e $filename) {
+        my $json = JSON->new->canonical->pretty->encode($params);
+        write_file($filename, { binmode => ':utf8' }, \$json);
+    }
 }
 
 sub fix_permissions {
