@@ -76,7 +76,22 @@ sub execute {
         my $table_schema = $schema->{abstract_schema}->{$table};
         my @fields = @{$table_schema->{FIELDS}};
         info("dropping '$table.$column'");
-        $dbh->do("ALTER TABLE $table DROP COLUMN $column") if $exists;
+        if ($exists) {
+            # drop FKs first
+            my $fks = $dbh->selectcol_arrayref("
+                SELECT constraint_name
+                  FROM information_schema.key_column_usage
+                 WHERE table_schema = '$database'
+                       AND table_name = '$table'
+                       AND column_name = '$column'
+            ");
+            foreach my $fk (@$fks) {
+                info("dropping foreign key '$fk'");
+                $dbh->do("ALTER TABLE $table DROP FOREIGN KEY $fk");
+            }
+            # now the column
+            $dbh->do("ALTER TABLE $table DROP COLUMN $column");
+        }
         my @new_fields;
         for (my $i = 0; $i < scalar(@fields); $i += 2) {
             my ($name, $rh) = @fields[$i, $i + 1];
