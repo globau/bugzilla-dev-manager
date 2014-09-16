@@ -334,7 +334,7 @@ sub set_param {
 
 sub _load_params {
     my ($self) = @_;
-    return unless -e $self->path . '/data/params' || -e $self->path . '/data/params.js';
+    return unless -e $self->path . '/data/params' || -e $self->path . '/data/params.json';
 
     my $filename = $self->path . '/data/params';
     if (-e $filename) {
@@ -346,7 +346,7 @@ sub _load_params {
         return \%params;
     }
 
-    $filename .= '.js';
+    $filename .= '.json';
     if (-e $filename) {
         return decode_json(read_file($filename, binmode => ':utf8'));
     }
@@ -356,7 +356,7 @@ sub _load_params {
 
 sub _save_params {
     my ($self, $params) = @_;
-    return unless -e $self->path . '/data/params' || -e $self->path . '/data/params.js';
+    return unless -e $self->path . '/data/params' || -e $self->path . '/data/params.json';
 
     my $orig = $self->_load_params();
     foreach my $name (sort keys %$params) {
@@ -373,7 +373,7 @@ sub _save_params {
         return;
     }
 
-    $filename .= '.js';
+    $filename .= '.json';
     if (-e $filename) {
         my $json = JSON->new->canonical->pretty->encode($params);
         write_file($filename, { binmode => ':utf8' }, \$json);
