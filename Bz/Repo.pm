@@ -52,6 +52,9 @@ sub _build_url {
 sub _build_branch {
     my ($self) = @_;
     foreach my $line ($self->git('branch')) {
+        if ($line =~ /^\* \(no branch, rebasing ([^\)]+)/) {
+            return $1;
+        }
         next unless $line =~ /^\* (\S+)/;
         return $1;
     }
