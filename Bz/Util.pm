@@ -9,6 +9,9 @@ our @EXPORT = qw(
     warning
     alert
 
+    disable_messages
+    enable_messages
+
     confirm
     prompt
     get_text
@@ -34,7 +37,10 @@ sub coloured {
     return -t STDOUT ? colored(@_) : shift;
 }
 
+my $_show_messages = 1;
+
 sub message {
+    return unless $_show_messages;
     print STDERR "@_\n";
 }
 
@@ -48,6 +54,14 @@ sub warning {
 
 sub alert {
     print STDERR coloured("@_", 'red') . "\n";
+}
+
+sub disable_messages {
+    $_show_messages = 0;
+}
+
+sub enable_messages {
+    $_show_messages = 1;
 }
 
 sub confirm {
