@@ -83,19 +83,6 @@ use constant PATCHES => (
             action  => sub { s/Bugzilla\@Development/Bugzilla\@Mozilla/ },
         },
     },
-    {
-        desc    => 'Image::Magick',
-        file    => 'extensions/BmpConvert/Config.pm',
-        modperl => 1,
-        apply   => {
-            match   => sub { /Image::Magick'/ },
-            action  => sub { s/Image::Magick/Image::Magick::Q16/ },
-        },
-        revert  => {
-            match   => sub { /Image::Magick::Q16/ },
-            action  => sub { s/Image::Magick::Q16/Image::Magick/ },
-        },
-    },
 );
 
 sub apply {
