@@ -1,8 +1,9 @@
-package Bz::App::Command::reset_queue;
+package Bz::App::Command::queue_reset;
 use parent 'Bz::App::Base';
 use Bz;
 
 use constant ALIASES => qw(
+    reset_queue
     reset_email_queue
 );
 
