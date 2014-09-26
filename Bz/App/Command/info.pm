@@ -13,6 +13,7 @@ sub execute {
     if ($current->is_workdir) {
         push @info, [ 'subdir',     coloured($current->dir, 'green') ];
         push @info, [ 'summary',    coloured($current->summary || '-', 'green') ];
+        push @info, [ 'bug',        'https://bugzilla.mozilla.org/show_bug.cgi?id=' . $current->bug_id ] if $current->bug_id;
         push @info, [ 'repo',       $current->repo ];
         push @info, [ 'url',        $current->url ];
         push @info, [ 'branch',     $current->branch ];
