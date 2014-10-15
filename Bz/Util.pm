@@ -69,10 +69,12 @@ sub confirm {
 }
 
 sub prompt {
-    my ($prompt, $valid_re) = @_;
+    my ($prompt, $options) = @_;
     $prompt = '?' unless $prompt;
     $prompt =~ s/\s+$//;
-    $valid_re = qr/./ unless $valid_re;
+    my $valid_re = $options
+        ? qr/[$options]/i
+        : qr/./;
     print chr(7), coloured("$prompt ", 'yellow');
     my $start_time = (time);
     my $key;
@@ -88,12 +90,12 @@ sub prompt {
         }
         if (ord($key) == 3 || ord($key) == 27) {
             print "^C\n";
-            exit;
+            return undef;
         }
     } until $key =~ $valid_re;
     ReadMode(0);
     print "$key\n";
-    return $key;
+    return lc($key);
 }
 
 sub get_text {

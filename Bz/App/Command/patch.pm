@@ -93,7 +93,7 @@ sub execute {
         die "too many patches found\n" if scalar(@patches) > 10;
 
         my $prompt = "  0. cancel\n";
-        my $re = '0';
+        my $options = '0';
         for(my $i = 1; $i <= scalar @patches; $i++) {
             my $patch = $patches[$i - 1];
             $prompt .= sprintf(
@@ -102,17 +102,17 @@ sub execute {
                 $patch->{summary},
                 ($opt->all && $patch->{is_obsolete} ? '[obsolete]' : ''),
             );
-            $re .= "$i";
+            $options .= "$i";
         }
         $prompt .= '? ';
         my $no;
-        if ($preselect && $preselect =~ qr/[$re]/i) {
+        if ($preselect && $preselect =~ qr/[$options]/) {
             print coloured($prompt, 'yellow') . "$preselect\n";
             $no = $preselect;
         } else {
-            $no = prompt($prompt, qr/[$re]/i);
+            $no = prompt($prompt, $options);
         }
-        exit if $no == 0;
+        exit unless $no;
         my $attach_id = $patches[$no - 1]->{id};
 
         if (!$opt->download) {

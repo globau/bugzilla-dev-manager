@@ -25,7 +25,8 @@ sub execute {
     } else {
         my @files = (@modified, @new);
         list(\@new, \@modified);
-        while (my $key = lc(prompt('stage [y/n/d/l]?', qr/[yndl]/i))) {
+        while (my $key = prompt('stage [y/n/d/l]?', 'yndl')) {
+            last unless defined $key;
             if ($key eq 'd') {
                 foreach my $file (@new) {
                     $current->git('diff', '/dev/null', $file);
