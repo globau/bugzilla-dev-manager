@@ -65,7 +65,7 @@ sub execute {
 sub diff {
     my ($self, $workdir, $opt) = @_;
 
-    my $base = $workdir->bug_id || $workdir->dir;
+    my $base = $workdir->dir;
     my $revision = 0;
     foreach my $file (glob("${base}_*.patch")) {
         next unless $file =~ /^\Q$base\E_(\d+)\.patch$/;
