@@ -65,7 +65,7 @@ sub enable_messages {
 }
 
 sub confirm {
-    return lc(prompt(shift, qr/[yn]/i)) eq 'y' ? 1 : 0;
+    return (prompt(shift, 'yn') || '') eq 'y' ? 1 : 0;
 }
 
 sub prompt {
