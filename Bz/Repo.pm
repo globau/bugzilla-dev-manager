@@ -109,8 +109,8 @@ sub fix {
     if (!$self->is_workdir) {
         $self->revert_permissions();
     }
-    $self->fix_permissions();
     $self->delete_crud();
+    $self->fix_permissions();
 }
 
 sub fix_line_endings {
