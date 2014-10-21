@@ -24,6 +24,8 @@ our @EXPORT = qw(
     warn_coloured
 
     sudo_on_output
+
+    vers_cmp
 );
 
 use File::Slurp;
@@ -180,6 +182,46 @@ sub sudo_on_output {
         message("escalating $command");
         system "sudo $command";
     }
+}
+
+sub vers_cmp {
+    my ($a, $b) = @_;
+
+    $a =~ s/^0*(\d.+)/$1/;
+    $b =~ s/^0*(\d.+)/$1/;
+
+    my @A = ($a =~ /([-.]|\d+|[^-.\d]+)/g);
+    my @B = ($b =~ /([-.]|\d+|[^-.\d]+)/g);
+
+    my ($A, $B);
+    while (@A and @B) {
+        $A = shift @A;
+        $B = shift @B;
+        if ($A eq '-' and $B eq '-') {
+            next;
+        } elsif ( $A eq '-' ) {
+            return -1;
+        } elsif ( $B eq '-') {
+            return 1;
+        } elsif ($A eq '.' and $B eq '.') {
+            next;
+        } elsif ( $A eq '.' ) {
+            return -1;
+        } elsif ( $B eq '.' ) {
+            return 1;
+        } elsif ($A =~ /^\d+$/ and $B =~ /^\d+$/) {
+            if ($A =~ /^0/ || $B =~ /^0/) {
+                return $A cmp $B if $A cmp $B;
+            } else {
+                return $A <=> $B if $A <=> $B;
+            }
+        } else {
+            $A = uc $A;
+            $B = uc $B;
+            return $A cmp $B if $A cmp $B;
+        }
+    }
+    @A <=> @B;
 }
 
 1;
