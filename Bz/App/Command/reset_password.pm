@@ -31,6 +31,7 @@ sub execute {
     chdir($workdir->path);
     require Bugzilla;
     require Bugzilla::Install;
+    Bugzilla->params->{password_complexity} = 'no_constraints';
     Bugzilla::Install::reset_password($login);
 }
 
