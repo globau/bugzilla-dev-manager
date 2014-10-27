@@ -2,6 +2,8 @@ package Bz::App::Command::queue_list;
 use parent 'Bz::App::Base';
 use Bz;
 
+use DateTime;
+
 use constant ALIASES => qw(
     list_queue
     list_email_queue
@@ -25,9 +27,15 @@ sub execute {
     ", { Slice => {} });
 
     info(scalar(@$jobs) . " job" . (@$jobs == 1 ? '' : 's') . ' on ' . $workdir->db);
-    if (@$jobs) {
-        $Data::Dumper::Terse = 1;
-        message(Dumper($jobs));
+    foreach my $job (@$jobs) {
+        (my $func = $job->{funcname}) =~ s/^Bugzilla::Job:://;
+        my $insert = DateTime->from_epoch(epoch => $job->{insert_time});
+        my $after  = DateTime->from_epoch(epoch => $job->{run_after});
+        printf "%s | %s | %s\n",
+            $func,
+            $insert->ymd('-') . ' ' . $insert->hms(':'),
+            $after->ymd('-') . ' ' . $after->hms(':'),
+        ;
     }
 }
 
