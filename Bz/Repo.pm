@@ -207,7 +207,19 @@ sub delete_crud {
 
 sub new_files {
     my ($self) = @_;
-    return $self->git_status('\?\?');
+    my @files;
+
+    foreach my $file ($self->git_status('\?\?')) {
+        if (-f $file) {
+            push @files, $file;
+            next;
+        }
+        chdir($self->path);
+        find(sub {
+            push @files, $File::Find::name if -f $_;
+        }, $file);
+    }
+    return @files;
 }
 
 sub new_code_files {

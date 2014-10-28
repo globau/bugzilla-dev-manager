@@ -49,6 +49,11 @@ sub execute {
     my @command = ('diff');
     push @command, '-w' if $opt->whitespace;
 
+    foreach my $file ($workdir->new_files) {
+        print "($file)\n";
+        $workdir->git(@command, '/dev/null', $file);
+    }
+
     $workdir->git(@command);
     push @command, '--staged';
     $workdir->git(@command);
