@@ -83,7 +83,7 @@ sub git_status {
         chomp $line;
         if ($line =~ /^(..) (.+)$/) {
             my ($status, $file) = ($1, $2);
-            next unless $status =~ /^$status_mask$/;
+            next if $status_mask &&  $status !~ /^$status_mask$/;
             $file =~ s/^.+? -> //
                 if substr($status, 0, 1) eq 'R';
             push @files, $file;
