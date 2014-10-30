@@ -95,7 +95,7 @@ use constant PATCHES => (
             modperl     => 0,
         },
         apply   => {
-            match   => sub { /\n\s*RewriteEngine On\n(?!\s*RewriteBase)/ },
+            match   => sub { /\bRewriteEngine On\b/ && !/\bRewriteBase\b/ },
             action  => sub { my $dir = $_[0]->dir; s/(\n(\s*)RewriteEngine On\n)/$1$2RewriteBase \/$dir\/\n/ },
         },
         revert   => {
