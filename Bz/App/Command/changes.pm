@@ -50,7 +50,7 @@ sub execute {
     push @command, '-w' if $opt->whitespace;
 
     foreach my $file ($workdir->new_files) {
-        print "($file)\n";
+        next if $file =~ /\.patch$/;
         $workdir->git(@command, '/dev/null', $file);
     }
 
