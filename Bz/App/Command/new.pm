@@ -44,6 +44,14 @@ sub execute {
         info(sprintf("Bug %s: %s", $bug->id, $bug->summary));
     }
 
+    # creating a dir with the name 123456-bmo should default to 'bmo'
+    # likewise for -trunk
+    if (!@$args && $dir =~ /-bmo$/) {
+        push @$args, 'bmo';
+    } elsif (!@$args && $dir =~ /-trunk$/) {
+        push @$args, 'trunk';
+    }
+
     # use bmo defaults if just 'bmo' is provided, likewise for 'trunk'
     my ($repo_name, $db);
     if (scalar(@$args) == 1 && $args->[0] eq 'bmo') {
