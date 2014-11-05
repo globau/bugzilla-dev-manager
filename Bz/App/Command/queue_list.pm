@@ -32,7 +32,7 @@ sub execute {
         printf "%7s | %-19s | %-19s | %-19s\n",
             'type',
             'inserted',
-            'after aftert',
+            'run after',
             'grabbed until'
         ;
     }
