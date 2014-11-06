@@ -250,7 +250,7 @@ sub committed_files {
     my @files;
     foreach my $line ($self->git('diff', '--name-status', 'origin/' . $self->branch, $self->branch)) {
         chomp $line;
-        if ($line =~ /^M\s+(.+)$/) {
+        if ($line =~ /^[AM]\s+(.+)$/) {
             push @files, $1;
         }
     }
