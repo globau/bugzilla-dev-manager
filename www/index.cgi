@@ -121,7 +121,12 @@ __DATA__
 
 body {
     font-family: "Helvetica Neue", "Nimbus Sans L", Arial, sans-serif;
-    background: url(bug.gif) no-repeat fixed top right;
+}
+
+#bug {
+    position: fixed;
+    top: 0px;
+    right: 0px;
 }
 
 a {
@@ -172,6 +177,8 @@ function delete_instance(dir, summary) {
 </script>
 </head>
 <body>
+
+<img src="bug.gif" width="100" height="100" id="bug">
 
 <table border="0" cellpadding="5" cellspacing="0" width="100%">
 
