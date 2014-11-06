@@ -129,11 +129,25 @@ my $_workdirs;
 sub workdirs {
     require Bz::Workdir;
     chdir(Bz->config->htdocs_path);
-    return $_workdirs ||= [
-        map { Bz::Workdir->new({ dir => $_ }) }
-        grep { !-l $_ && -d $_ }
-        glob('*')
-    ];
+    if (!$_workdirs) {
+        my @dirs =
+            map { Bz::Workdir->new({ dir => $_ }) }
+            grep { !-l $_ && -d $_ }
+            glob('*');
+        my (@bug_dirs, @non_bug_dirs);
+        foreach my $workdir (@dirs) {
+            if ($workdir->bug_id) {
+                push @bug_dirs, $workdir;
+            } else {
+                push @non_bug_dirs, $workdir;
+            }
+        }
+        $_workdirs = [
+            (sort { $a->dir cmp $b->dir } @non_bug_dirs),
+            (sort { $a->bug_id <=> $b->bug_id } @bug_dirs),
+        ];
+    }
+    return $_workdirs;
 }
 
 sub preload_bugs {
