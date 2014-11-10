@@ -29,7 +29,8 @@ sub execute {
     info(scalar(@$jobs) . " job" . (@$jobs == 1 ? '' : 's') . ' on ' . $workdir->db);
     if (@$jobs) {
         print "current time: ", _date(time()), "\n";
-        printf "%7s | %-19s | %-19s | %-19s\n",
+        printf "%7s | %7s | %-19s | %-19s | %-19s\n",
+            'jobid',
             'type',
             'inserted',
             'run after',
@@ -38,7 +39,8 @@ sub execute {
     }
     foreach my $job (@$jobs) {
         (my $func = $job->{funcname}) =~ s/^Bugzilla::Job:://;
-        printf "%7s | %19s | %19s | %19s\n",
+        printf "%7s | %7s | %19s | %19s | %19s\n",
+            $job->{jobid},
             $func,
             _date($job->{insert_time}),
             _date($job->{run_afer}),

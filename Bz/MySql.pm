@@ -4,7 +4,7 @@ use Moo;
 
 use DBI;
 
-my %_cache;
+my %_dbi_cache;
 
 sub dbh {
     my ($class, $database, $args) = @_;
@@ -23,15 +23,17 @@ sub dbh {
     $args->{PrintError} = 1 unless exists $args->{PrintError};
 
     my $key = "$database $params{db_user}";
-    if (!$_cache{$key}) {
-        $_cache{$key} = DBI->connect(
-            "DBI:mysql:database=$database;host=$params{db_host};port=$params{db_port}",
+    if (!$_dbi_cache{$key}) {
+        my $dsn = "DBI:mysql:database=$database;host=$params{db_host};port=$params{db_port}";
+        $_dbi_cache{$key}{dbh} = DBI->connect(
+            $dsn,
             $params{db_user}, $params{db_pass},
             $args,
         );
-        $_cache{$key}->do('SET NAMES utf8');
+        $_dbi_cache{$key}->{dsn} = $dsn;
+        $_dbi_cache{$key}->{dbh}->do('SET NAMES utf8');
     }
-    return $_cache{$key};
+    return $_dbi_cache{$key}->{dbh};
 }
 
 sub database_exists {
@@ -42,6 +44,19 @@ sub database_exists {
         $result = 1;
     };
     return $result;
+}
+
+1;
+
+package DBI::db;
+
+sub dsn {
+    my ($self) = @_;
+    foreach my $key (keys %_dbi_cache) {
+        return $_dbi_cache{$key}->{dsn}
+            if $_dbi_cache{$key}->{dbh} eq $self;
+    }
+    return undef;
 }
 
 1;
