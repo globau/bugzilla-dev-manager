@@ -12,13 +12,15 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "bz patch [bug_id|source_url] [-preselect] [--all] [--download]";
+    return "bz patch [bug_id|source_url] [--last] [--all] [--download] [--test]";
 }
 
 sub opt_spec {
     return (
+        [ "last|l",       "apply the last/latest patch without prompting" ],
         [ "all|a",        "list all patches" ],
         [ "download|d",   "download patch, but don't apply" ],
+        [ "test|t",       "run tests after applying patch" ],
     );
 }
 
@@ -47,11 +49,6 @@ sub execute {
         if @$args && $args->[0] !~ /^-/;
     $source ||= $current->is_workdir ? $current->bug_id : undef;
     die $self->usage_error('missing bug_id or source') unless $source;
-
-    my $preselect;
-    if (@$args && $args->[0] =~ /^-(\d+)$/) {
-        $preselect = $1;
-    }
 
     my $filename;
     if ($source =~ m#^https?://#) {
@@ -93,7 +90,7 @@ sub execute {
         die "too many patches found\n" if scalar(@patches) > 10;
 
         my $prompt = "  0. cancel\n";
-        my $options = '0';
+        my @options = ('0');
         for(my $i = 1; $i <= scalar @patches; $i++) {
             my $patch = $patches[$i - 1];
             $prompt .= sprintf(
@@ -102,18 +99,18 @@ sub execute {
                 $patch->{summary},
                 ($opt->all && $patch->{is_obsolete} ? '[obsolete]' : ''),
             );
-            $options .= "$i";
+            push @options, $i;
         }
         $prompt .= '? ';
-        my $no;
-        if ($preselect && $preselect =~ qr/[$options]/) {
-            print coloured($prompt, 'yellow') . "$preselect\n";
-            $no = $preselect;
+        my $num;
+        if ($opt->last) {
+            $num = $options[$#options];
+            print coloured($prompt, 'yellow') . "$num\n";
         } else {
-            $no = prompt($prompt, $options);
+            $num = prompt($prompt, join('', @options));
         }
-        exit unless $no;
-        my $attach_id = $patches[$no - 1]->{id};
+        exit unless $num;
+        my $attach_id = $patches[$num - 1]->{id};
 
         if (!$opt->download) {
             info("patching " . $current->dir . " with #$attach_id");
@@ -126,6 +123,9 @@ sub execute {
         if (!$current->is_workdir) {
             info("deleting $filename");
             unlink($filename);
+        } elsif ($opt->test) {
+            info("running tests");
+            $current->test();
         }
     }
 }
