@@ -26,7 +26,7 @@ sub execute {
                 $a_i <=> $b_i;
             }
             grep { /^\d+-\d+\.patch$/ }
-            glob($workdir->dir . '*.patch');
+            glob(($workdir->bug_id ? $workdir->bug_id : $workdir->dir) . '*.patch');
     }
     splice(@files, 0, -2);
 
