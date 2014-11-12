@@ -212,12 +212,13 @@ sub new_files {
     foreach my $file ($self->git_status('\?\?')) {
         if (-f $file) {
             push @files, $file;
-            next;
+        } elsif ($file ne 'tmp/') {
+            die $file;
+            chdir($self->path);
+            find(sub {
+                push @files, $File::Find::name if -f $_;
+            }, $file);
         }
-        chdir($self->path);
-        find(sub {
-            push @files, $File::Find::name if -f $_;
-        }, $file);
     }
     return @files;
 }

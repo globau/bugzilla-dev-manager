@@ -34,15 +34,15 @@ sub execute {
     my $workdir = Bz->current_workdir;
     chdir($workdir->path);
 
-    disable_messages();
-    $workdir->unfix();
-    enable_messages();
+    silent {
+        $workdir->unfix();
+    };
 
     my @files = ($workdir->staged_files(), $workdir->modified_files());
     unless (@files) {
-        disable_messages();
-        $workdir->fix();
-        enable_messages();
+        silent {
+            $workdir->fix();
+        };
         die "no files are modified or staged\n"
     }
 
@@ -58,9 +58,9 @@ sub execute {
     push @command, '--staged';
     $workdir->git(@command);
 
-    disable_messages();
-    $workdir->fix();
-    enable_messages();
+    silent {
+        $workdir->fix();
+    };
 }
 
 1;

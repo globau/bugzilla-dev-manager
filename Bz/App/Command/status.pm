@@ -14,15 +14,15 @@ sub execute {
     my ($self, $opt, $args) = @_;
 
     my $current = Bz->current;
-    disable_messages();
-    $current->unfix() if $current->is_workdir;
-    enable_messages();
+    silent {
+        $current->unfix() if $current->is_workdir;
+    };
 
     $current->git('status');
 
-    disable_messages();
-    $current->fix() if $current->is_workdir;
-    enable_messages();
+    silent {
+        $current->fix() if $current->is_workdir;
+    };
 }
 
 1;

@@ -9,8 +9,7 @@ our @EXPORT = qw(
     warning
     alert
 
-    disable_messages
-    enable_messages
+    silent
 
     confirm
     prompt
@@ -28,10 +27,10 @@ our @EXPORT = qw(
     vers_cmp
 );
 
-use File::Slurp;
+use File::Slurp 'read_file';
 use IPC::System::Simple 'runx';
 use Term::ANSIColor 'colored';
-use Term::ReadKey;
+use Term::ReadKey qw(ReadMode ReadKey);
 use Time::HiRes 'usleep';
 
 sub coloured {
@@ -58,11 +57,10 @@ sub alert {
     print STDERR coloured("@_", 'red') . "\n";
 }
 
-sub disable_messages {
+sub silent(&) {
+    my ($sub) = @_;
     $_show_messages = 0;
-}
-
-sub enable_messages {
+    &$sub();
     $_show_messages = 1;
 }
 
