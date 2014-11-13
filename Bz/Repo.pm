@@ -270,10 +270,47 @@ sub test {
     $self->check_for_common_mistakes();
 }
 
+sub _test_ignore {
+    my ($self, $file, @extra) = @_;
+    return 1 if -d $file;
+    return 1 unless -T $file;
+    my $root = $self->path;
+    if (substr($file, 0, length($root)) eq $root) {
+        substr($file, 0, length($root) + 1) = '';
+    }
+
+    my @ignore_prefix = qw(
+        contrib/
+        data/
+        docs/
+        .git/
+        js/jquery/
+        js/yui/
+        js/yui3/
+        template_cache/
+        tmp/
+    );
+    my @ignore_suffix = qw(
+        .orig
+        .patch
+    );
+
+    foreach my $prefix (@ignore_prefix) {
+        return 1 if substr($file, 0, length($prefix)) eq $prefix;
+    }
+    foreach my $suffix (@ignore_suffix) {
+        return 1 if substr($file, length($file) - length($suffix)) eq $suffix;
+    }
+    foreach my $extra (@extra) {
+        return 1 if $file eq $extra;
+    }
+    return 0;
+}
+
 sub check_for_tabs {
     my ($self) = @_;
 
-    my $root = $self->path,
+    my $root = $self->path;
     my @invalid;
     my @ignore = qw(
         js/change-columns.js
@@ -281,13 +318,7 @@ sub check_for_tabs {
     );
     find(sub {
             my $file = $File::Find::name;
-            return if -d $file;
-            return unless -T $file;
-            return if $file =~ /^\Q$root\E\/(\.git|contrib|data|js\/yui\d?|docs)\//;
-            return if $file =~ /\.patch$/;
-            my $filename = $file;
-            $filename =~ s/^\Q$root\E\///;
-            return if grep { $_ eq $filename } @ignore;
+            return if $self->_test_ignore($file, @ignore);
             my $content = read_file($file);
             return unless $content =~ /\t/;
             push @invalid, $file;
@@ -298,7 +329,7 @@ sub check_for_tabs {
     return unless @invalid;
     alert('The following files contain tabs:');
     foreach my $filename (@invalid) {
-        $filename =~ s/^\Q$root\E\///;
+        substr($filename, 0, length($root) + 1) = '';
         warning($filename);
     }
 }
@@ -343,6 +374,7 @@ sub check_for_common_mistakes {
             $hunk_file = $1;
             next;
         }
+        next if $self->_test_ignore($hunk_file);
         chomp($line);
         if ($line =~ /\s+$/) {
             my $ra = $whitespace{$hunk_file} ||= [];
@@ -374,7 +406,7 @@ sub check_for_common_mistakes {
 
     my @missing_bp;
     foreach my $file (($self->new_code_files(), $self->staged_files())) {
-        next if -B $file;
+        next if $self->_test_ignore($file);
         push @missing_bp, $file
             unless Bz->boiler_plate->exists($file);
     }
