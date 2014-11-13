@@ -10,15 +10,23 @@ use constant ALIASES => qw(
 );
 
 sub usage_desc {
-    return "bz queue-peek <jobid>";
+    return "bz queue-peek [<jobid>] [--last]";
 }
 
 sub abstract {
     return "prints the payload for the specified jobid in the queue";
 }
 
+sub opt_spec {
+    return (
+        [ "last|l",       "show the last/latest job" ],
+    );
+}
+
+
 sub validate_args {
     my ($self, $opt, $args) = @_;
+    return if $opt->last;
     $self->usage_error("missing <jobid>") unless @$args;
     $self->usage_error("invalid <jobid>") unless $args->[0] =~ /^\d+$/;
 }
@@ -41,6 +49,17 @@ sub execute {
             prefix  => 'ts_',
         }],
     );
+
+    if ($opt->last) {
+        $job_id = $dbh->selectrow_array("
+            SELECT jobid
+              FROM ts_job
+             ORDER BY insert_time DESC
+             LIMIT 1
+        ");
+        die "failed to find any jobs in the queue\n"
+            unless $job_id;
+    }
 
     foreach my $hash_dsn ($ts->shuffled_databases) {
         my $driver = $ts->driver_for($hash_dsn);
