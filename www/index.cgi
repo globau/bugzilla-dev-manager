@@ -23,7 +23,7 @@ use Template;
 
 $SIG{__DIE__} = \&CGI::Carp::confess;
 
-use constant USE_MULTIPART => 1;
+my $use_multipart = $ENV{HTTP_USER_AGENT} =~ /Firefox/;
 
 my $cgi = CGI->new();
 if ($cgi->param('delete') && $cgi->param('dir')) {
@@ -66,7 +66,7 @@ my $template = Template->new({
     },
 });
 
-if (USE_MULTIPART) {
+if ($use_multipart) {
     print $cgi->multipart_init();
     print $cgi->multipart_start(-type => 'text/html; charset=UTF-8');
     print <<'EOF';
@@ -101,14 +101,14 @@ $workdirs = [
     } @$workdirs
 ];
 
-if (USE_MULTIPART) {
+if ($use_multipart) {
     print $cgi->multipart_start(-type => 'text/html; charset=UTF-8');
 }
 
 $template->process(\*DATA, { workdirs => $workdirs })
     or die($template->error() . "\n");
 
-if (USE_MULTIPART) {
+if ($use_multipart) {
     print $cgi->multipart_final();
 }
 
