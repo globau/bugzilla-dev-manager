@@ -213,7 +213,6 @@ sub new_files {
         if (-f $file) {
             push @files, $file;
         } elsif ($file ne 'tmp/') {
-            die $file;
             chdir($self->path);
             find(sub {
                 push @files, $File::Find::name if -f $_;
