@@ -232,6 +232,11 @@ sub modified_files {
     return $self->git_status('.M');
 }
 
+sub deleted_files {
+    my ($self) = @_;
+    return $self->git_status(' D');
+}
+
 sub staged_files {
     my ($self) = @_;
     return $self->git_status('[^ \?D].');
