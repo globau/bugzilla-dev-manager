@@ -299,7 +299,7 @@ sub fix_params {
 
     my $id = $self->bug_id;
     $params->{announcehtml} = sprintf(
-        '<div style="' .
+        '<div id="announcehtml" style="' .
         'background: url(%sbkg_warning.png) repeat-y scroll left top #fff9db;' .
         'color: #666458;' .
         'padding: 5px 5px 5px 19px;' .
