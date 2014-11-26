@@ -115,6 +115,18 @@ use constant PATCHES => (
             action  => sub { s/Bugzilla\@Development/Bugzilla\@Mozilla/ },
         },
     },
+    {
+        desc    => 'asset concatenation',
+        file    => 'Bugzilla/Constants.pm',
+        apply   => {
+            match   => sub { /CONCATENATE_ASSETS => 1;/ },
+            action  => sub { s/CONCATENATE_ASSETS => 1/CONCATENATE_ASSETS => 0/ },
+        },
+        revert  => {
+            match   => sub { /use constant CONCATENATE_ASSETS => 0;/ },
+            action  => sub { s/CONCATENATE_ASSETS => 0/CONCATENATE_ASSETS => 1/ },
+        },
+    },
 );
 
 sub apply {
