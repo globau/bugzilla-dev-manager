@@ -259,6 +259,14 @@ sub unfix {
     $self->delete_crud();
 }
 
+sub delete_cache {
+    my ($self) = @_;
+    $self->SUPER::delete_cache();
+    if (-e $self->path . '/data/summary') {
+        unlink($self->path . '/data/summary');
+    }
+}
+
 sub delete_crud {
     my ($self) = @_;
     $self->SUPER::delete_crud();

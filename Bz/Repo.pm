@@ -103,6 +103,9 @@ sub update {
     chdir($cwd);
 }
 
+sub delete_cache {
+}
+
 sub fix {
     my ($self) = @_;
     $self->fix_line_endings();
