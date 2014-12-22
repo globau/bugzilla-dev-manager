@@ -23,7 +23,7 @@ use Template;
 
 $SIG{__DIE__} = \&CGI::Carp::confess;
 
-my $use_multipart = $ENV{HTTP_USER_AGENT} =~ /Firefox/;
+my $use_multipart = ($ENV{HTTP_USER_AGENT} || '') =~ /Firefox/;
 
 my $cgi = CGI->new();
 if ($cgi->param('delete') && $cgi->param('dir')) {
