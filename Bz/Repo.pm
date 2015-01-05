@@ -116,6 +116,9 @@ sub fix {
     $self->fix_permissions();
 }
 
+sub unfix {
+}
+
 sub fix_line_endings {
     my ($self) = @_;
     find(

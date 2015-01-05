@@ -254,6 +254,7 @@ sub fix {
 
 sub unfix {
     my ($self) = @_;
+    $self->SUPER::unfix();
     Bz::LocalPatches->revert($self);
     $self->revert_permissions();
     $self->delete_crud();
