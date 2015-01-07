@@ -22,6 +22,12 @@ providing a bug_id as the <dir> is recommended.
 EOF
 }
 
+sub opt_spec {
+    return (
+        [ "force|f", "allow repos with local modifications" ],
+    );
+}
+
 sub validate_args {
     my ($self, $opt, $args) = @_;
     $self->usage_error("missing <dir>") unless @$args;
@@ -69,7 +75,7 @@ sub execute {
     die "unable to continue: " . $repo->dir . " is pointing to the production branch\n"
         if $repo->branch eq 'production';
     die "unable to continue: " . $repo->dir . " has local modifications\n"
-        if $repo->git_status();
+        if !$opt->force && $repo->git_status();
 
     if (!$mysql->database_exists($workdir->db)) {
         exit unless confirm("the database '" . $workdir->db . "' does not exist, continue?");
