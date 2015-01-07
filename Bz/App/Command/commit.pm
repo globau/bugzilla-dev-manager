@@ -72,9 +72,11 @@ sub execute {
     if (@committed) {
         $repo->git('diff', '--stat', 'origin/' . $repo->branch, $repo->branch);
     }
-    print "\n";
+    message('');
 
     $repo->git(qw(config --get remote.origin.url));
+    message('* ' . $repo->branch);
+    message('');
 
     if (@staged) {
         my @args = (
