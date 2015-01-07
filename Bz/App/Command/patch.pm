@@ -12,7 +12,7 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "bz patch [bug_id|source_url] [--last] [--all] [--download] [--test]";
+    return "bz patch [bug_id|source_url|file] [--last] [--all] [--download] [--test]";
 }
 
 sub opt_spec {
@@ -51,7 +51,12 @@ sub execute {
     die $self->usage_error('missing bug_id or source') unless $source;
 
     my $filename;
-    if ($source =~ m#^https?://#) {
+    my $delete = 1;
+    if (-e $source) {
+        $filename = $source;
+        $delete = 0;
+
+    } elsif ($source =~ m#^https?://#) {
         my $uri = URI->new($source)
             or die "invalid url: $source\n";
         my @segments = $uri->path_segments();
@@ -120,7 +125,7 @@ sub execute {
 
     if (!$opt->download) {
         $current->apply_patch($filename);
-        if (!$current->is_workdir) {
+        if (!$current->is_workdir && $delete) {
             info("deleting $filename");
             unlink($filename);
         } elsif ($opt->test) {
