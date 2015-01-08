@@ -37,6 +37,7 @@ sub execute {
         my ($current_attach_id) = $files[0] =~ /^\d+-(\d+)/;
         my @patches =
             sort { $a->{id} <=> $b->{id} }
+            grep { $_->{is_patch} }
             grep { $_->{id} != $current_attach_id }
             @{ Bz->bugzilla->attachments($workdir->bug_id) };
         if (my $patch = pop @patches) {
