@@ -57,7 +57,7 @@ sub execute {
             }
             exit unless confirm("continue?");
         }
-        $workdir->test(undef, [2, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+        $workdir->test(undef, [2..12]);
     }
     $self->diff($workdir, $opt);
 }
