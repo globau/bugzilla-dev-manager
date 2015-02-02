@@ -221,7 +221,9 @@ sub new_files {
         } elsif ($file ne 'tmp/') {
             chdir($self->path);
             find(sub {
-                push @files, $File::Find::name if -f $_;
+                if (-f $_ && runx([0, 1], 'git', 'check-ignore', '-q', $File::Find::name)) {
+                    push @files, $File::Find::name;
+                }
             }, $file);
         }
     }
