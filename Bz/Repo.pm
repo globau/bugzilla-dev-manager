@@ -7,6 +7,7 @@ use File::Basename;
 use File::Find;
 use File::Slurp;
 use IPC::System::Simple qw(EXIT_ANY capturex runx);
+use Test::Harness ();
 
 has is_workdir      => ( is => 'ro', default => sub { 0 } );
 has is_bmo          => ( is => 'lazy' );
@@ -277,10 +278,35 @@ sub added_files {
 }
 
 sub test {
-    my ($self) = @_;
+    my ($self, $opt, $args) = @_;
     $self->check_for_tabs();
     $self->check_for_unknown_files();
     $self->check_for_common_mistakes();
+
+    my $cwd = abs_path();
+    chdir($self->path);
+    my @test_files;
+    if ($args && @$args) {
+        foreach my $number (@$args) {
+            $number = sprintf("%03d", $number);
+            push @test_files, glob("t/$number*.t");
+        }
+    } else {
+        push @test_files, glob("t/*.t");
+    }
+
+    $self->run_tests($opt, @test_files);
+    chdir($cwd);
+}
+
+sub run_tests {
+    my ($self, $opt, @test_files) = @_;
+
+    my $cwd = abs_path();
+    chdir($self->path);
+    $Test::Harness::verbose = $opt->verbose if $opt;
+    Test::Harness::runtests(@test_files);
+    chdir($cwd);
 }
 
 sub _test_ignore {

@@ -17,7 +17,6 @@ use File::Path 'remove_tree';
 use File::Slurp;
 use JSON;
 use Safe;
-use Test::Harness ();
 
 has is_workdir  => ( is => 'ro', default => sub { 1 } );
 has dir         => ( is => 'ro', required => 1 );
@@ -439,37 +438,6 @@ sub check_db {
     if ($count > 5) {
         warn($self->db . " has $count users with bugmail enabled\n");
     }
-}
-
-sub test {
-    my ($self, $opt, $args) = @_;
-
-    $self->SUPER::test();
-
-    my $cwd = abs_path();
-    chdir($self->path);
-    my @test_files;
-    if ($args && @$args) {
-        foreach my $number (@$args) {
-            $number = sprintf("%03d", $number);
-            push @test_files, glob("t/$number*.t");
-        }
-    } else {
-        push @test_files, glob("t/*.t");
-    }
-
-    $self->run_tests($opt, @test_files);
-    chdir($cwd);
-}
-
-sub run_tests {
-    my ($self, $opt, @test_files) = @_;
-
-    my $cwd = abs_path();
-    chdir($self->path);
-    $Test::Harness::verbose = $opt->verbose if $opt;
-    Test::Harness::runtests(@test_files);
-    chdir($cwd);
 }
 
 sub delete {
