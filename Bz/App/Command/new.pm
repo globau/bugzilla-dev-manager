@@ -19,6 +19,7 @@ sub description {
 creates a new instance, using the provided name.
 
 providing a bug_id as the <dir> is recommended.
+if a repo is not provided, bmo is used by default.
 EOF
 }
 
@@ -57,6 +58,9 @@ sub execute {
     } elsif (!@$args && $dir =~ /-trunk$/) {
         push @$args, 'trunk';
     }
+
+    # default to bmo repo
+    push @$args, 'bmo' unless @$args;
 
     # use bmo defaults if just 'bmo' is provided, likewise for 'trunk'
     my ($repo_name, $db);
