@@ -78,7 +78,7 @@ sub execute {
         message("downloading $uri to $filename");
         getstore($uri, $filename);
 
-    } else {
+    } elsif ($source !~ /\D/) {
         my $bug_id = $source;
         message("fetching patches from bug $bug_id");
         my $summary;
@@ -121,6 +121,8 @@ sub execute {
             info("patching " . $current->dir . " with #$attach_id");
         }
         $filename = $current->download_patch($attach_id);
+    } else {
+        die "unrecognised source: $source\n";
     }
 
     if (!$opt->download) {
