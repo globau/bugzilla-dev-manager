@@ -14,7 +14,7 @@ sub usage_desc {
 
 sub opt_spec {
     return (
-        [ "all|a",  "revert all changes (removes untracked files)" ],
+        [ "all|a|d",  "revert all changes (removes untracked files)" ],
     );
 }
 
