@@ -134,7 +134,7 @@ use constant PATCHES => (
         apply   => {
             match   => sub { !/File::Slurp/ },
             action  => sub {
-                my $line = q#use File::Slurp; if (scalar(read_file $file) !~ /\b(system|exec)\(/) { ok(1,"$file does not call system or exec"); next }#;
+                my $line = q#use File::Slurp; if (scalar(read_file $file) !~ /\b(system|exec)\b/) { ok(1,"$file does not call system or exec"); next }#;
                 s/(my \$command)/$line $1/;
             },
         },
