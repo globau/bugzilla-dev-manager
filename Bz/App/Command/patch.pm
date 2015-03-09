@@ -3,6 +3,7 @@ use parent 'Bz::App::Base';
 use Bz;
 
 use Bz::Util 'coloured';
+use File::Slurp 'read_file';
 use LWP::Simple;
 use URI;
 use URI::QueryParam;
@@ -12,7 +13,7 @@ sub abstract {
 }
 
 sub usage_desc {
-    return "bz patch [bug_id|source_url|file] [--last] [--all] [--download] [--test]";
+    return "bz patch [bug_id|source_url|file] [--last] [--all] [--download] [--test] [--patch]";
 }
 
 sub opt_spec {
@@ -21,6 +22,7 @@ sub opt_spec {
         [ "all|a",        "list all patches" ],
         [ "download|d",   "download patch, but don't apply" ],
         [ "test|t",       "run tests after applying patch" ],
+        [ "patch|p",      "use 'patch' instead of 'git' to apply the patch" ],
     );
 }
 
@@ -126,7 +128,32 @@ sub execute {
     }
 
     if (!$opt->download) {
-        $current->apply_patch($filename);
+        my @patch = read_file($filename);
+        my $is_git = 0;
+        foreach my $line (@patch) {
+            if ($line =~ /^diff --git a\//) {
+                $is_git = 1;
+                last;
+            }
+        }
+
+        chdir($current->path);
+        if ($is_git && !$opt->patch) {
+            $current->git('apply', '--verbose', $filename);
+        } else {
+            open(my $patch, "|patch -p0");
+            foreach my $line (@patch) {
+                # === renamed file 'extensions/BMO/web/js/choose_product.js' => 'extensions/BMO/web/js/prod_comp_search.js'
+                if ($line =~ /^=== renamed file '([^']+)' => '([^']+)'/) {
+                    message("renamed '$1' => '$2'");
+                    rename($1, $2);
+                    next;
+                }
+                print $patch $line;
+            }
+            close($patch);
+        }
+
         if (!$current->is_workdir && $delete) {
             info("deleting $filename");
             unlink($filename);
