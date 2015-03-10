@@ -309,7 +309,7 @@ sub run_tests {
     chdir($cwd);
 }
 
-sub _test_ignore {
+sub should_ignore_file {
     my ($self, $file, @extra) = @_;
     return 1 if -d $file;
     return 1 unless -T $file;
@@ -357,7 +357,7 @@ sub check_for_tabs {
     );
     find(sub {
             my $file = $File::Find::name;
-            return if $self->_test_ignore($file, @ignore);
+            return if $self->should_ignore_file($file, @ignore);
             my $content = read_file($file);
             return unless $content =~ /\t/;
             push @invalid, $file;
@@ -413,7 +413,7 @@ sub check_for_common_mistakes {
             $hunk_file = $1;
             next;
         }
-        next if $self->_test_ignore($hunk_file);
+        next if $self->should_ignore_file($hunk_file);
         chomp($line);
         if ($line =~ /\s+$/) {
             my $ra = $whitespace{$hunk_file} ||= [];
@@ -445,7 +445,7 @@ sub check_for_common_mistakes {
 
     my @missing_bp;
     foreach my $file (($self->new_code_files(), $self->staged_files())) {
-        next if $self->_test_ignore($file);
+        next if $self->should_ignore_file($file);
         push @missing_bp, $file
             unless Bz->boiler_plate->exists($file);
     }

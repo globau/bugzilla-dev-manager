@@ -48,7 +48,7 @@ sub execute {
 
     if (!$opt->quick) {
         my @missing;
-        foreach my $file (grep { -T $_ } $workdir->added_files()) {
+        foreach my $file (grep { !$workdir->should_ignore_file($_) } $workdir->added_files()) {
             push @missing, $file unless $boiler_plate->exists($file);
         }
         if (@missing) {
