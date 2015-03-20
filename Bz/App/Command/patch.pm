@@ -138,10 +138,13 @@ sub execute {
         }
 
         chdir($current->path);
-        if ($is_git && !$opt->patch) {
-            $current->git('apply', '--verbose', $filename);
+        if (!$opt->patch) {
+            $current->git('apply', '-p', ($is_git ? '1' : '0'), '--verbose', $filename);
+            if ($IPC::System::Simple::EXITVAL) {
+                die "patch failed to apply\n";
+            }
         } else {
-            open(my $patch, "|patch -p0");
+            open(my $patch, "|patch -p" . ($is_git ? '1' : '0'));
             foreach my $line (@patch) {
                 # === renamed file 'extensions/BMO/web/js/choose_product.js' => 'extensions/BMO/web/js/prod_comp_search.js'
                 if ($line =~ /^=== renamed file '([^']+)' => '([^']+)'/) {
