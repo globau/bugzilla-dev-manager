@@ -145,6 +145,48 @@ use constant PATCHES => (
             },
         },
     },
+    {
+        # use ::XXX($object) or ::XXX(var_name => $object)
+        # globally scoped, will output to STDERR using Data::Dumper
+        desc    => '::XXX debugging',
+        file    => 'Bugzilla.pm',
+        whole   => 1,
+        apply   => {
+            match   => sub { !/sub main::XXX/ },
+            action  => sub {
+                my $sub = <<'EOF';
+sub main::XXX {
+    require Data::Dumper;
+    my $d;
+    if (scalar(@_) == 1) {
+        my ($value) = @_;
+        if (!ref($value)) {
+            $value =~ s/\n+$//;
+            print STDERR $value, "\n";
+            return;
+        }
+        $d = Data::Dumper->new([ $value ]);
+        $d->Terse(1);
+    } else {
+        my ($name, $value) = @_;
+        $d = Data::Dumper->new([ $value ], [ $name ]);
+    }
+    $d->Sortkeys(1)->Quotekeys(0);
+    print STDERR $d->Dump();
+}
+EOF
+                $sub =~ s/\n\s+/ /g;
+                $sub =~ s/\n\}/ }/g;
+                s/\n1;\n/\n${sub}1;\n/;
+            },
+        },
+        revert  => {
+            match   => sub { /sub main::XXX/ },
+            action  => sub {
+                s/\nsub main::XXX[^\n]+//;
+            },
+        },
+    },
 );
 
 sub apply {
