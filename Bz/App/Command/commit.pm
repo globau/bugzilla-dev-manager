@@ -65,6 +65,10 @@ sub execute {
         unless $opt->quick;
     info('Bug ' . $bug->id . ': ' . $bug->summary);
 
+    if ($bug->assignee eq 'nobody@mozilla.org' || $bug->assignee =~ /\.bugs$/) {
+        die "cannot commit unassigned bugs\n";
+    }
+
     chdir($repo->path);
     if (@staged) {
         $repo->git(qw(diff --staged --stat));
