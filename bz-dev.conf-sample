@@ -8,6 +8,8 @@ repo_path   = "/opt/bugzilla/repo"
 yui2_path   = "/opt/bugzilla/yui2"
 yui3_path   = "/opt/bugzilla/yui3"
 
+default_repo        = "bmo" # or 'trunk' for upstream, empty string for detect
+
 default_bmo_repo    = "bmo/4.2"
 default_bmo_db      = "bugs_bmo_201312"
 

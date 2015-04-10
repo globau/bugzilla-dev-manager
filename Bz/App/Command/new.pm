@@ -19,7 +19,8 @@ sub description {
 creates a new instance, using the provided name.
 
 providing a bug_id as the <dir> is recommended.
-if a repo is not provided, bmo is used by default.
+if a repo is not provided, the default_source from the config file is used.
+if default_source is blank, the bug default is guessed from the bug.
 EOF
 }
 
@@ -60,7 +61,7 @@ sub execute {
     }
 
     # default to bmo repo
-    push @$args, 'bmo' unless @$args;
+    push @$args, $config->default_repo if !@$args && $config->default_repo;
 
     # use bmo defaults if just 'bmo' is provided, likewise for 'trunk'
     my ($repo_name, $db);
