@@ -58,6 +58,11 @@ sub new {
     bless($args, $class);
 }
 
+sub get {
+    my ($self, $name) = @_;
+    return exists $self->{$name} ? $self->{$name} : undef;
+}
+
 sub _names {
     my ($self) = @_;
     return sort keys %$self;
@@ -68,7 +73,7 @@ sub AUTOLOAD {
     our $AUTOLOAD;
     my $name = $AUTOLOAD;
     $name =~ s/.*:://;
-    return exists $self->{$name} ? $self->{$name} : undef;
+    return $self->get($name);
 }
 
 1;
