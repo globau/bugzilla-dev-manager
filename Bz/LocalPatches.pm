@@ -146,6 +146,18 @@ use constant PATCHES => (
         },
     },
     {
+        desc    => 'disable sentry',
+        file    => 'Bugzilla/Sentry.pm',
+        apply   => {
+            match   => sub { /^\s+install_sentry_handler\(\);$/ },
+            action  => sub { s/^/#/ },
+        },
+        revert  => {
+            match   => sub { /^#\s+install_sentry_handler\(\);$/ },
+            action  => sub { s/^#// },
+        },
+    },
+    {
         # use ::XXX($object) or ::XXX(var_name => $object)
         # globally scoped, will output to STDERR using Data::Dumper
         desc    => '::XXX debugging',
