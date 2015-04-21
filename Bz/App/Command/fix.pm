@@ -12,7 +12,7 @@ sub usage_desc {
 
 sub opt_spec {
     return (
-        [ "all|a", "refreshes/fixes all things, including cached data" ],
+        [ "all|a|f", "refreshes/fixes all things, including cached data" ],
     );
 }
 sub description {
