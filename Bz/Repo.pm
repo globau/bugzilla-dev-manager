@@ -282,6 +282,7 @@ sub test {
     $self->check_for_tabs();
     $self->check_for_unknown_files();
     $self->check_for_common_mistakes();
+    $self->check_with_jshint();
 
     my $cwd = abs_path();
     chdir($self->path);
@@ -456,6 +457,19 @@ sub check_for_common_mistakes {
         }
     }
     chdir($cwd);
+}
+
+sub check_with_jshint {
+    my ($self) = @_;
+    foreach my $file (grep { /\.js$/ } $self->staged_files) {
+        eval {
+            foreach my $line (capturex(EXIT_ANY, 'jshint', $file)) {
+                chomp($line);
+                last if $line eq '';
+                alert($line);
+            }
+        };
+    }
 }
 
 sub download_patch {
