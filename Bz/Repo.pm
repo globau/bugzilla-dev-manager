@@ -414,7 +414,7 @@ sub check_for_common_mistakes {
             $hunk_file = $1;
             next;
         }
-        next if $self->should_ignore_file($hunk_file);
+        next if defined($hunk_file) && $self->should_ignore_file($hunk_file);
         chomp($line);
         if ($line =~ /\s+$/) {
             my $ra = $whitespace{$hunk_file} ||= [];
