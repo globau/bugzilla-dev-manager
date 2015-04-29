@@ -462,6 +462,7 @@ sub check_for_common_mistakes {
 sub check_with_jshint {
     my ($self) = @_;
     foreach my $file (grep { /\.js$/ } $self->staged_files) {
+        return if $self->should_ignore_file($file);
         eval {
             foreach my $line (capturex(EXIT_ANY, 'jshint', $file)) {
                 chomp($line);
