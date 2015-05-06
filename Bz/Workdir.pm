@@ -236,10 +236,8 @@ sub localconfig {
 sub run_checksetup {
     my ($self, @args) = @_;
     info("running checksetup");
-    my $cwd = abs_path();
     chdir($self->path);
     system "./checksetup.pl @args";
-    chdir($cwd);
 }
 
 sub fix {
@@ -249,6 +247,7 @@ sub fix {
     $self->fix_params();
     $self->fix_permissions();
     $self->fix_missing_dirs();
+    $self->delete_template_cache();
 }
 
 sub unfix {
@@ -257,6 +256,20 @@ sub unfix {
     Bz::LocalPatches->revert($self);
     $self->revert_permissions();
     $self->delete_crud();
+    $self->delete_template_cache();
+}
+
+sub delete_template_cache {
+    my ($self) = @_;
+    unshift @INC, $self->path;
+    require Bugzilla;
+    require Bugzilla::Constants;
+    require Bugzilla::Install::Filesystem;
+    my $path = Bugzilla::Constants::bz_locations()->{template_cache};
+    message("deleting cached templates");
+    remove_tree($path);
+    mkdir($path);
+    Bugzilla::Install::Filesystem::fix_dir_permissions($path);
 }
 
 sub delete_cache {
