@@ -158,6 +158,18 @@ use constant PATCHES => (
         },
     },
     {
+        desc    => 'inactive reviewers',
+        file    => 'extensions/Review/Extension.pm',
+        apply   => {
+            match   => sub { /MAX_REVIEWER_LAST_SEEN_DAYS_AGO => 60;/ },
+            action  => sub { s/(MAX_REVIEWER_LAST_SEEN_DAYS_AGO) => 60/$1 => 0/ },
+        },
+        revert  => {
+            match   => sub { /MAX_REVIEWER_LAST_SEEN_DAYS_AGO => 0;/ },
+            action  => sub { s/(MAX_REVIEWER_LAST_SEEN_DAYS_AGO) => 0/$1 => 60/ },
+        },
+    },
+    {
         # use ::XXX($object) or ::XXX(var_name => $object)
         # globally scoped, will output to STDERR using Data::Dumper
         desc    => '::XXX debugging',
