@@ -17,6 +17,7 @@ sub opt_spec {
         [ "me", "ignore bug assignee when setting the patch author" ],
         [ "quick|q", "don't run tests before committing" ],
         [ "edit|e", "edit the commit message" ],
+        [ "force|f", "allow committing of unassigned bugs" ],
     );
 }
 
@@ -65,7 +66,9 @@ sub execute {
         unless $opt->quick;
     info('Bug ' . $bug->id . ': ' . $bug->summary);
 
-    if ($bug->assignee eq 'nobody@mozilla.org' || $bug->assignee =~ /\.bugs$/) {
+    if (!$opt->force
+        && ($bug->assignee eq 'nobody@mozilla.org' || $bug->assignee =~ /\.bugs$/)
+    ) {
         die "cannot commit unassigned bugs\n";
     }
 
