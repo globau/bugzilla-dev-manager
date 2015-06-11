@@ -51,7 +51,9 @@ sub execute {
     }
     foreach my $table (@$args) {
         info("dropping table '$table'");
-        $dbh->do("DROP TABLE $table");
+        eval {
+            $dbh->do("DROP TABLE $table");
+        };
         delete $schema->{abstract_schema}->{$table};
     }
 

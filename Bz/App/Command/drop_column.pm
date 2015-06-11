@@ -87,10 +87,14 @@ sub execute {
             ");
             foreach my $fk (@$fks) {
                 info("dropping foreign key '$fk'");
-                $dbh->do("ALTER TABLE $table DROP FOREIGN KEY $fk");
+                eval {
+                    $dbh->do("ALTER TABLE $table DROP FOREIGN KEY $fk");
+                };
             }
             # now the column
-            $dbh->do("ALTER TABLE $table DROP COLUMN $column");
+            eval {
+                $dbh->do("ALTER TABLE $table DROP COLUMN $column");
+            }
         }
         my @new_fields;
         for (my $i = 0; $i < scalar(@fields); $i += 2) {
