@@ -2,6 +2,8 @@ package Bz::App::Command::checksetup;
 use parent 'Bz::App::Base';
 use Bz;
 
+use IPC::System::Simple qw(runx EXIT_ANY);
+
 sub command_names {
     qw(
         checksetup
@@ -26,7 +28,16 @@ sub execute {
 
     info("running checksetup.pl");
     chdir($workdir->path);
-    system "./checksetup.pl " . join(' ', @$args);
+
+    # default to not precompiling templates
+    # use --template to force precompilation
+    if (!@$args) {
+        push @$args, '--no-templates';
+    } else {
+        @$args = grep { $_ ne '--templates' } @$args;
+    }
+
+    runx(EXIT_ANY, './checksetup.pl', @$args);
 }
 
 1;
