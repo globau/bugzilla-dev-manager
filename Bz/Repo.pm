@@ -417,8 +417,13 @@ sub check_for_common_mistakes {
             lines => {},
         },
         {
-            desc  => 'line "print STDERR" added',
+            desc  => 'line with "print STDERR" added',
             regex => qr/print\s+STDERR\s/,
+            lines => {},
+        },
+        {
+            desc  => 'line with "console.log()" added',
+            regex => qr/console\.log\(/,
             lines => {},
         },
     );
