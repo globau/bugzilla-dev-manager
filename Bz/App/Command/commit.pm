@@ -90,7 +90,7 @@ sub execute {
             'commit',
         );
 
-        my $message = 'Bug ' . $bug->id . ': ' . $bug->summary;
+        my $message = 'Bug ' . $bug->id . ' - ' . $bug->summary;
         if ($repo->is_upstream) {
             message("looking for reviewer");
             my $reviewer = '?';
