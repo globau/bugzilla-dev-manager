@@ -157,7 +157,7 @@ sub notify {
         '-activate com.googlecode.iterm2 ' .
         qq#-title "$title" # .
         qq#-message "$message" #;
-    runx('ssh', 'byron@mac', $remote_command);
+    runx('ssh', Bz->config->notify_host, $remote_command);
 }
 
 sub dieInfo {
