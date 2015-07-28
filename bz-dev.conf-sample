@@ -68,6 +68,7 @@ modperl_attach_url  = "http://attach.modperl.bz/"
 </nicknames>
 
 bmo_username = "glob@mozilla.com"
+bmo_api_key  = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 never_disable_bugmail = "glob@mozilla.com"
 never_disable_bugmail = "byron.jones@gmail.com"
