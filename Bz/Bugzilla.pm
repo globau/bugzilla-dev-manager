@@ -5,6 +5,7 @@ use Moo;
 use Bz::Bugzilla;
 use JSON::XS qw(decode_json);
 use LWP::UserAgent;
+use MIME::Base64 qw(decode_base64);
 use URI;
 use URI::QueryParam;
 
@@ -106,9 +107,12 @@ sub attachment {
     my $attachments = $self->_get(
         "bug/attachment/$attach_id"
     );
-    return $attachments->{attachments}->{$attach_id}
-        || die "failed to get attachment $attach_id information\n"
-
+    my $attachment = $attachments->{attachments}->{$attach_id}
+        || die "failed to get attachment $attach_id information\n";
+    if (exists $attachment->{data}) {
+        $attachment->{data} = decode_base64($attachment->{data});
+    }
+    return $attachment;
 }
 
 sub _get {
