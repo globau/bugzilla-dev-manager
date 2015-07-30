@@ -57,7 +57,7 @@ sub bugs {
             'bug/',
             {
                 ids => \@fetch_ids,
-                include_fields => join(',', @{ BUG_FIELDS() }),
+                include_fields => BUG_FIELDS,
             }
         );
         foreach my $bug (@{ $response->{bugs} }) {
@@ -120,11 +120,14 @@ sub _get {
     die "config file missing bmo_api_key\n" unless Bz->config->bmo_api_key;
     $args //= {};
 
+    if (exists $args->{include_fields} && ref($args->{include_fields})) {
+        $args->{include_fields} = join(',', @{ $args->{include_fields} });
+    }
+
     my $uri = URI->new('https://bugzilla.mozilla.org/rest/' . $endpoint);
     foreach my $name (sort keys %$args) {
         $uri->query_param($name => $args->{$name});
     }
-    print STDERR $uri->as_string, "\n";
 
     my $request = HTTP::Request->new('GET', $uri->as_string);
     $request->header( Content_Type => 'application/json' );
