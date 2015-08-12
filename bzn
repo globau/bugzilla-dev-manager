@@ -8,6 +8,9 @@ use Bz::App;
 use Bz::Util 'notify';
 
 $| = 1;
+my $start = time();
 Bz->config;
 Bz::App->run;
-notify('command completed');
+if (time() - $start > 5) {
+    notify('command completed');
+}
