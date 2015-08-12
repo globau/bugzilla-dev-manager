@@ -262,9 +262,15 @@ sub unfix {
 sub delete_template_cache {
     my ($self) = @_;
     unshift @INC, $self->path;
-    require Bugzilla;
-    require Bugzilla::Constants;
-    require Bugzilla::Install::Filesystem;
+    eval {
+        require Bugzilla;
+        require Bugzilla::Constants;
+        require Bugzilla::Install::Filesystem;
+    };
+    if ($@) {
+        warn "bugzilla code in broken state, unable to delete cached templates\n";
+        return;
+    }
     my $path = Bugzilla::Constants::bz_locations()->{template_cache};
     message("deleting cached templates");
     remove_tree($path);
