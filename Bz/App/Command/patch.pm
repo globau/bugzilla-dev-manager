@@ -52,6 +52,18 @@ sub execute {
     $source ||= $current->is_workdir ? $current->bug_id : undef;
     die $self->usage_error('missing bug_id or source') unless $source;
 
+    message('checking for local changes');
+    silent {
+        $current->unfix();
+    };
+    my @files = ($current->staged_files(), $current->modified_files());
+    silent {
+        $current->fix();
+    };
+    if (@files) {
+        return unless confirm("repo has local changes, continue?");
+    }
+
     my $filename;
     my $delete = 1;
     if (-e $source) {
