@@ -10,8 +10,15 @@ sub abstract {
 
 sub execute {
     my ($self, $opt, $args) = @_;
-    my $workdir = Bz->current_workdir;
     my $login = shift @$args;
+
+    if ($login && $login !~ /\@/) {
+        runx('oathtool', '--totp', '--base32', $login);
+        return;
+    }
+
+    my $workdir = Bz->current_workdir;
+
     if (!$login) {
         $login = Bz->config->params->maintainer;
         info("defaulting to $login");
