@@ -344,6 +344,9 @@ sub should_ignore_file {
     foreach my $extra (@extra) {
         return 1 if $file eq $extra;
     }
+    return 1 if
+        substr($file, 0, 3) eq 'js/'
+        && $file =~ /-min\.js$/;
     return 0;
 }
 
