@@ -2,7 +2,7 @@ package Bz::App::Command::totp;
 use parent 'Bz::App::Base';
 use Bz;
 
-use IPC::System::Simple qw( runx );
+use IPC::System::Simple qw( capture );
 
 sub abstract {
     return "execute oathtool with the totp secret for the provided account";
@@ -13,7 +13,7 @@ sub execute {
     my $login = shift @$args;
 
     if ($login && $login !~ /\@/) {
-        runx('oathtool', '--totp', '--base32', $login);
+        oathtool($login);
         return;
     }
 
@@ -31,8 +31,15 @@ sub execute {
     die "$login does not have TOTP enabled\n" unless $secret;
 
     require Convert::Base32;
-    my $secret32 = Convert::Base32::encode_base32($secret);
-    runx('oathtool', '--totp', '--base32', $secret32);
+    oathtool(Convert::Base32::encode_base32($secret));
+}
+
+sub oathtool {
+    my ($secret32) = @_;
+    my $code = capture('oathtool', '--totp', '--base32', $secret32);
+    chomp($code);
+    print "$code\n";
+    clipboard($code);
 }
 
 1;
