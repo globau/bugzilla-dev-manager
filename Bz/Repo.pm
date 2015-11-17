@@ -97,7 +97,6 @@ sub git_status {
 sub update {
     my ($self) = @_;
     info("updating repo " . $self->dir);
-    $self->fix();
     my $cwd = abs_path();
     chdir($self->path);
     $self->git(qw(pull --rebase));
