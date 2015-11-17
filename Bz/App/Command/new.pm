@@ -6,12 +6,14 @@ use Bz::Bug;
 use Bz::Repo;
 use Bz::Workdir;
 
+use IPC::System::Simple qw( runx );
+
 sub abstract {
     return "create a new instance";
 }
 
 sub usage_desc {
-    return "bz new <dir> [repo] [db]";
+    return "bz new <dir> [repo] [db] [-f][-p]";
 }
 
 sub description {
@@ -27,6 +29,7 @@ EOF
 sub opt_spec {
     return (
         [ "force|f", "allow repos with local modifications" ],
+        [ "patch|p", "download and deploy the latest patch" ],
     );
 }
 
@@ -100,6 +103,7 @@ sub execute {
     $workdir->check_db();
 
     info("$dir created\n" . $workdir->summary);
+    runx($0, 'patch', '-lt') if $opt->patch;
     notify("$dir created");
 }
 
